@@ -50,20 +50,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const setUserWithProfile = async (authUser: User | null) => {
     if (authUser) {
       try {
-        // Buscar perfil real en la base de datos
-        const { data: profile, error } = await supabase
+        console.log('🔍 Loading profile for user:', authUser.id)
+
+        // Timeout de 10 segundos para la consulta
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Profile query timeout')), 10000)
+        })
+
+        const queryPromise = supabase
           .from('user_profiles')
           .select('*')
           .eq('auth_user_id', authUser.id)
           .single()
 
+        const { data: profile, error } = await Promise.race([queryPromise, timeoutPromise]) as any
+
         if (error || !profile) {
-          console.error('Profile not found:', error)
-          setUser(null)
+          console.error('❌ Profile not found:', error)
+          // En lugar de setear null, crear un perfil temporal
+          setUser({
+            ...authUser,
+            username: authUser.email?.split('@')[0] || 'user',
+            full_name: authUser.email || 'Unknown User',
+            role: 'trainer',
+          })
           setUserProfile(null)
           return
         }
 
+        console.log('✅ Profile loaded:', profile)
         setUserProfile(profile)
         setUser({
           ...authUser,
@@ -72,8 +87,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           role: profile.role,
         })
       } catch (err) {
-        console.error('Error loading profile:', err)
-        setUser(null)
+        console.error('❌ Error loading profile:', err)
+        // En lugar de setear null, crear un perfil temporal
+        setUser({
+          ...authUser,
+          username: authUser.email?.split('@')[0] || 'user',
+          full_name: authUser.email || 'Unknown User',
+          role: 'trainer',
+        })
         setUserProfile(null)
       }
     } else {
@@ -87,20 +108,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const initAuth = async () => {
       try {
+        console.log('🚀 Initializing auth...')
+
+        // Timeout para toda la inicialización
+        const initTimeout = setTimeout(() => {
+          console.log('⏰ Auth initialization timeout - proceeding anyway')
+          if (isMounted) {
+            setLoading(false)
+          }
+        }, 15000)
+
         // Obtener sesión inicial
         const { data: { session }, error } = await supabase.auth.getSession()
         if (!isMounted) return
 
         if (error) {
-          console.error('Error getting session:', error)
+          console.error('❌ Error getting session:', error)
+          clearTimeout(initTimeout)
           setLoading(false)
           return
         }
 
+        console.log('📋 Session status:', session ? 'Active' : 'None')
         setSession(session)
         if (session?.user) {
           await setUserWithProfile(session.user)
         }
+
+        clearTimeout(initTimeout)
         setLoading(false)
 
         // Escuchar cambios de autenticación
