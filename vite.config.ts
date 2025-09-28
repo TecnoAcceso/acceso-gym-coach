@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'AccesoGym Coach',
-        short_name: 'GymCoach',
+        short_name: 'AccesoGym Coach',
         description: 'Sistema de gestión de membresías para entrenadores personales',
         theme_color: '#0B1426',
         background_color: '#0B1426',
