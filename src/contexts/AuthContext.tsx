@@ -87,12 +87,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const initAuth = async () => {
       try {
+        // Verificar variables de entorno
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+        if (!supabaseUrl || !supabaseKey) {
+          console.error('Missing environment variables')
+          setLoading(false)
+          return
+        }
+
         // Obtener sesión inicial
         const { data: { session }, error } = await supabase.auth.getSession()
+
         if (!isMounted) return
 
         if (error) {
           console.error('Error getting session:', error)
+
+          // Si es un error de refresh token, limpiar el storage y recargar
+          if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
+            console.log('Clearing corrupted auth data...')
+            localStorage.clear()
+            sessionStorage.clear()
+            window.location.reload()
+            return
+          }
+
           setLoading(false)
           return
         }
@@ -121,7 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           subscription.unsubscribe()
         }
       } catch (error) {
-        console.error('Auth initialization error:', error)
+        console.error('❌ Auth initialization error:', error)
         if (isMounted) {
           setLoading(false)
         }

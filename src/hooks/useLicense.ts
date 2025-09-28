@@ -20,7 +20,10 @@ export function useLicense() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchLicense = async () => {
-    if (!user || !userProfile) return
+    if (!user || !userProfile) {
+      setLoading(false)
+      return
+    }
 
     try {
       setLoading(true)
