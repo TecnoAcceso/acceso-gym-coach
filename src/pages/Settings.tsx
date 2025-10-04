@@ -1,23 +1,56 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
+import { useClients } from '@/hooks/useClients'
 import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import Toast, { ToastType } from '@/components/Toast'
 
 export default function Settings() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const { license } = useLicense()
+  const { clearState } = useClients()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [toast, setToast] = useState<{
+    show: boolean
+    message: string
+    type: ToastType
+  }>({ show: false, message: '', type: 'success' })
+
+  const showToast = (message: string, type: ToastType) => {
+    setToast({ show: true, message, type })
+  }
 
   const handleSignOut = async () => {
+    if (isLoggingOut) return // Prevenir múltiples clicks
+
     try {
+      setIsLoggingOut(true)
+      console.log('🚪 Iniciando proceso de logout...')
+
+      // Limpiar estado de clientes inmediatamente
+      clearState()
+
+      // Ejecutar logout
       await signOut()
-      navigate('/login')
+
+      // La navegación se maneja en el AuthContext o por el window.location
+      console.log('✅ Logout completado')
     } catch (err: any) {
-      console.error('Error signing out:', err)
+      console.error('❌ Error durante logout:', err)
+      showToast('Error al cerrar sesión. Reintentando...', 'error')
+
+      // Si falla, forzar limpieza y redirección
+      clearState()
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.href = '/login'
+    } finally {
+      setIsLoggingOut(false)
     }
   }
 
@@ -62,13 +95,18 @@ export default function Settings() {
         </div>
 
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: isLoggingOut ? 1 : 1.02 }}
+          whileTap={{ scale: isLoggingOut ? 1 : 0.98 }}
           onClick={handleSignOut}
-          className="w-full py-3 px-4 bg-red-500/20 border border-red-500/30 text-red-400 font-medium rounded-lg hover:bg-red-500/30 transition-all duration-300 flex items-center justify-center space-x-2"
+          disabled={isLoggingOut}
+          className={`w-full py-3 px-4 bg-red-500/20 border border-red-500/30 text-red-400 font-medium rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
+            isLoggingOut
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:bg-red-500/30'
+          }`}
         >
-          <LogOut className="w-5 h-5" />
-          <span>Cerrar Sesión</span>
+          <LogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
+          <span>{isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}</span>
         </motion.button>
       </motion.div>
 
@@ -176,6 +214,14 @@ export default function Settings() {
         className="text-center text-sm text-slate-400"
       >
       </motion.div>
+
+      {/* Toast */}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   )
 }

@@ -223,8 +223,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    try {
+      console.log('🚪 Iniciando logout...')
+
+      // Limpiar estado local inmediatamente para evitar problemas de UI
+      setUser(null)
+      setUserProfile(null)
+      setSession(null)
+      setLoading(false)
+
+      // Limpiar storage local para evitar estados inconsistentes
+      localStorage.clear()
+      sessionStorage.clear()
+
+      // Ejecutar logout de Supabase
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        console.error('❌ Error durante logout:', error)
+        // Aún así forzar la limpieza completa
+        window.location.href = '/login'
+        return
+      }
+
+      console.log('✅ Logout exitoso')
+    } catch (error) {
+      console.error('❌ Error crítico durante logout:', error)
+      // En caso de error crítico, forzar redirección
+      setUser(null)
+      setUserProfile(null)
+      setSession(null)
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.href = '/login'
+    }
   }
 
   const value = {

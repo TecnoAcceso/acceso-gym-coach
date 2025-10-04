@@ -21,7 +21,7 @@ export default function LicenseExpired({ onContactSupport }: LicenseExpiredProps
   const handleWhatsApp = () => {
     const message = 'Hola, necesito renovar mi licencia para acceder al sistema de gestión de membresías. Por favor, ayúdeme con el proceso.'
     const encodedMessage = encodeURIComponent(message)
-    const whatsappUrl = `https://wa.me/+584121234567?text=${encodedMessage}`
+    const whatsappUrl = `https://wa.me/+584120557690?text=${encodedMessage}`
     window.open(whatsappUrl, '_blank')
   }
 
