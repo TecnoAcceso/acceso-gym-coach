@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useClients } from '@/hooks/useClients'
 import Toast, { ToastType } from '@/components/Toast'
-import { ArrowLeft, Save, User, Phone, Calendar, Clock } from 'lucide-react'
+import { ArrowLeft, Save, User, Phone, Calendar, Clock, Weight, Ruler, Cake, Activity, ChevronDown, ChevronUp } from 'lucide-react'
 
 const clientSchema = z.object({
   document_type: z.enum(['V', 'E'], { required_error: 'Selecciona el tipo de documento' }),
@@ -20,6 +20,15 @@ const clientSchema = z.object({
     .transform(val => val.toUpperCase()),
   phone: z.string()
     .regex(/^\+[1-9]\d{7,14}$/, 'Formato: +código_país + número (ej: +584123456789)'),
+  birth_date: z.string().optional(),
+  initial_weight: z.number().positive('El peso debe ser positivo').optional().or(z.nan()).transform(val => isNaN(val as number) ? undefined : val),
+  height: z.number().positive('La altura debe ser positiva').optional().or(z.nan()).transform(val => isNaN(val as number) ? undefined : val),
+  has_pathology: z.boolean().optional(),
+  pathology_detail: z.string().optional(),
+  has_injury: z.boolean().optional(),
+  injury_detail: z.string().optional(),
+  has_allergies: z.boolean().optional(),
+  allergies_detail: z.string().optional(),
   start_date: z.string().min(1, 'La fecha de inicio es requerida'),
   duration_months: z.number().min(1, 'La duración debe ser al menos 1 mes').max(12, 'La duración máxima es 12 meses'),
 })
@@ -32,6 +41,7 @@ export default function ClientFormPage() {
   const { clients, createClient, updateClient } = useClients()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showMedicalCondition, setShowMedicalCondition] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -61,6 +71,10 @@ export default function ClientFormPage() {
 
   const watchStartDate = watch('start_date')
   const watchDuration = watch('duration_months')
+  const watchBirthDate = watch('birth_date')
+  const watchHasPathology = watch('has_pathology')
+  const watchHasInjury = watch('has_injury')
+  const watchHasAllergies = watch('has_allergies')
 
   // Calculate end date automatically
   const endDate = React.useMemo(() => {
@@ -74,12 +88,49 @@ export default function ClientFormPage() {
     return ''
   }, [watchStartDate, watchDuration])
 
+  // Calculate age automatically
+  const age = React.useMemo(() => {
+    if (watchBirthDate) {
+      const [year, month, day] = watchBirthDate.split('-').map(Number)
+      const birthDate = new Date(year, month - 1, day)
+      const today = new Date()
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--
+      }
+      return calculatedAge
+    }
+    return null
+  }, [watchBirthDate])
+
   useEffect(() => {
     if (client) {
       setValue('document_type', client.document_type)
       setValue('cedula', client.cedula)
       setValue('full_name', client.full_name)
       setValue('phone', client.phone)
+      if (client.birth_date) setValue('birth_date', client.birth_date)
+      if (client.initial_weight) setValue('initial_weight', client.initial_weight)
+      if (client.height) setValue('height', client.height)
+
+      // Cargar condición médica si existe
+      if (client.medical_condition) {
+        setShowMedicalCondition(true)
+        setValue('has_pathology', client.medical_condition.has_pathology)
+        if (client.medical_condition.pathology_detail) {
+          setValue('pathology_detail', client.medical_condition.pathology_detail)
+        }
+        setValue('has_injury', client.medical_condition.has_injury)
+        if (client.medical_condition.injury_detail) {
+          setValue('injury_detail', client.medical_condition.injury_detail)
+        }
+        setValue('has_allergies', client.medical_condition.has_allergies)
+        if (client.medical_condition.allergies_detail) {
+          setValue('allergies_detail', client.medical_condition.allergies_detail)
+        }
+      }
+
       setValue('start_date', client.start_date)
       setValue('duration_months', client.duration_months)
     }
@@ -109,11 +160,35 @@ export default function ClientFormPage() {
         }
       }
 
+      // Construir objeto de condición médica si existe algún campo
+      const medicalCondition = (data.has_pathology || data.has_injury || data.has_allergies) ? {
+        has_pathology: data.has_pathology || false,
+        pathology_detail: data.has_pathology ? data.pathology_detail : undefined,
+        has_injury: data.has_injury || false,
+        injury_detail: data.has_injury ? data.injury_detail : undefined,
+        has_allergies: data.has_allergies || false,
+        allergies_detail: data.has_allergies ? data.allergies_detail : undefined,
+      } : undefined
+
+      // Preparar datos del cliente
+      const clientData = {
+        document_type: data.document_type,
+        cedula: data.cedula,
+        full_name: data.full_name,
+        phone: data.phone,
+        birth_date: data.birth_date,
+        initial_weight: data.initial_weight,
+        height: data.height,
+        medical_condition: medicalCondition,
+        start_date: data.start_date,
+        duration_months: data.duration_months,
+      }
+
       if (isEditing && id) {
-        await updateClient({ id, ...data })
+        await updateClient({ id, ...clientData })
         showToast('¡Cliente actualizado exitosamente!', 'success')
       } else {
-        await createClient(data)
+        await createClient(clientData)
         showToast('¡Cliente registrado exitosamente!', 'success')
       }
 
@@ -130,7 +205,7 @@ export default function ClientFormPage() {
   }
 
   return (
-    <div className="p-4 max-w-md mx-auto">
+    <div className="p-4 pb-20 max-w-md mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -168,6 +243,7 @@ export default function ClientFormPage() {
                   <input
                     {...register('cedula')}
                     type="text"
+                    inputMode="numeric"
                     placeholder="Solo números (12345678)"
                     onInput={(e) => {
                       // Solo permitir números
@@ -235,6 +311,171 @@ export default function ClientFormPage() {
               )}
             </div>
 
+            {/* Birth Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Fecha de Nacimiento (Opcional)
+              </label>
+              <div className="relative">
+                <Cake className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  {...register('birth_date')}
+                  type="date"
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                />
+              </div>
+              {errors.birth_date && (
+                <p className="mt-1 text-sm text-red-400">{errors.birth_date.message}</p>
+              )}
+            </div>
+
+            {/* Age Display */}
+            {age !== null && (
+              <div className="p-3 bg-accent-primary/10 border border-accent-primary/20 rounded-lg">
+                <p className="text-sm text-accent-primary">
+                  <strong>Edad:</strong> {age} años
+                </p>
+              </div>
+            )}
+
+            {/* Initial Weight and Height */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Peso Inicial (kg)
+                </label>
+                <div className="relative">
+                  <Weight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    {...register('initial_weight', { valueAsNumber: true })}
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    placeholder="70.5"
+                    className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                  />
+                </div>
+                {errors.initial_weight && (
+                  <p className="mt-1 text-sm text-red-400">{errors.initial_weight.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Altura (cm)
+                </label>
+                <div className="relative">
+                  <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    {...register('height', { valueAsNumber: true })}
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    placeholder="175"
+                    className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                  />
+                </div>
+                {errors.height && (
+                  <p className="mt-1 text-sm text-red-400">{errors.height.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Medical Condition Section (Collapsible) */}
+            <div className="border border-white/10 rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowMedicalCondition(!showMedicalCondition)}
+                className="w-full px-4 py-3 bg-dark-200/30 flex items-center justify-between text-slate-300 hover:bg-dark-200/50 transition-colors"
+              >
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-5 h-5 text-accent-primary" />
+                  <span className="font-medium">Condición Médica (Opcional)</span>
+                </div>
+                {showMedicalCondition ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </button>
+
+              {showMedicalCondition && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-4 space-y-4 bg-dark-200/10"
+                >
+                  {/* Patología */}
+                  <div>
+                    <label className="flex items-center space-x-2 text-sm font-medium text-slate-300 mb-2">
+                      <input
+                        {...register('has_pathology')}
+                        type="checkbox"
+                        className="w-4 h-4 rounded bg-dark-200/50 border-white/10 text-accent-primary focus:ring-accent-primary/20"
+                      />
+                      <span>¿Tiene alguna patología?</span>
+                    </label>
+                    {watchHasPathology && (
+                      <motion.input
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        {...register('pathology_detail')}
+                        type="text"
+                        placeholder="¿Cuál?"
+                        className="w-full px-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                      />
+                    )}
+                  </div>
+
+                  {/* Lesión */}
+                  <div>
+                    <label className="flex items-center space-x-2 text-sm font-medium text-slate-300 mb-2">
+                      <input
+                        {...register('has_injury')}
+                        type="checkbox"
+                        className="w-4 h-4 rounded bg-dark-200/50 border-white/10 text-accent-primary focus:ring-accent-primary/20"
+                      />
+                      <span>¿Tiene alguna lesión?</span>
+                    </label>
+                    {watchHasInjury && (
+                      <motion.input
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        {...register('injury_detail')}
+                        type="text"
+                        placeholder="¿Dónde?"
+                        className="w-full px-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                      />
+                    )}
+                  </div>
+
+                  {/* Alergias */}
+                  <div>
+                    <label className="flex items-center space-x-2 text-sm font-medium text-slate-300 mb-2">
+                      <input
+                        {...register('has_allergies')}
+                        type="checkbox"
+                        className="w-4 h-4 rounded bg-dark-200/50 border-white/10 text-accent-primary focus:ring-accent-primary/20"
+                      />
+                      <span>¿Tiene alergias?</span>
+                    </label>
+                    {watchHasAllergies && (
+                      <motion.input
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        {...register('allergies_detail')}
+                        type="text"
+                        placeholder="¿A qué?"
+                        className="w-full px-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                      />
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
             {/* Start Date */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -245,7 +486,7 @@ export default function ClientFormPage() {
                 <input
                   {...register('start_date')}
                   type="date"
-                  min={new Date().toISOString().split('T')[0]}
+                  min={isEditing ? undefined : new Date().toISOString().split('T')[0]}
                   className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
                 />
               </div>

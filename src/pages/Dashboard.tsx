@@ -2,22 +2,29 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useClients } from '@/hooks/useClients'
+import { useAuth } from '@/contexts/AuthContext'
 import { Client } from '@/types/client'
 import ClientCard from '@/components/ClientCard'
 import StatsCard from '@/components/StatsCard'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import FilterMenu, { FilterType } from '@/components/FilterMenu'
 import RenewModal from '@/components/RenewModal'
+import MeasurementsModal from '@/components/MeasurementsModal'
 import Toast, { ToastType } from '@/components/Toast'
 import ConfirmModal from '@/components/ConfirmModal'
 import { Plus, Users, AlertTriangle, XCircle, Search } from 'lucide-react'
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { clients, loading, renewClient, deleteClient } = useClients()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [renewModal, setRenewModal] = useState<{
+    isOpen: boolean
+    client: Client | null
+  }>({ isOpen: false, client: null })
+  const [measurementsModal, setMeasurementsModal] = useState<{
     isOpen: boolean
     client: Client | null
   }>({ isOpen: false, client: null })
@@ -59,7 +66,48 @@ export default function Dashboard() {
   }
 
   const handleWhatsApp = (client: Client) => {
-    const message = `Hola ${client.full_name}, tu membresía ${client.status === 'expired' ? 'ha vencido' : 'está por vencer'}. Por favor, ponte en contacto para renovar tu plan de entrenamiento. ¡Te esperamos! 💪`
+    const trainerName = user?.full_name || 'Tu entrenador'
+
+    // Calcular días que faltan para vencer (solo para clientes "expiring")
+    let daysRemaining = 0
+    if (client.status === 'expiring') {
+      const today = new Date()
+      const [year, month, day] = client.end_date.split('-').map(Number)
+      const endDate = new Date(year, month - 1, day)
+      const diffTime = endDate.getTime() - today.getTime()
+      daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+
+    const message = client.status === 'expired'
+      ? `¡Hola ${client.full_name}! 👋
+
+Esperamos que te encuentres muy bien. Queremos informarte que tu membresía de entrenamiento ha vencido.
+
+No te preocupes, ¡aún estás a tiempo de retomar tu rutina y seguir alcanzando tus metas! 💪🏋️
+
+¿Te gustaría renovar tu plan? Estamos aquí para ayudarte a continuar con tu progreso.
+
+¡Esperamos verte pronto!
+
+Att: ${trainerName}
+
+---
+_Powered by TecnoAcceso / ElectroShop_`
+      : `¡Hola ${client.full_name}! 👋
+
+Esperamos que estés disfrutando de tu entrenamiento. Te escribimos para recordarte que tu membresía está próxima a vencer en *${daysRemaining} ${daysRemaining === 1 ? 'día' : 'días'}*. ⏰
+
+Para que no pierdas el ritmo y continues avanzando hacia tus objetivos, te invitamos a renovar tu plan antes de la fecha de vencimiento. 💪🏋️
+
+¿Te gustaría renovar? ¡Estamos aquí para asistirte!
+
+¡Seguimos entrenando juntos!
+
+Att: ${trainerName}
+
+---
+_Powered by TecnoAcceso / ElectroShop_`
+
     const encodedMessage = encodeURIComponent(message)
     const phoneNumber = client.phone.replace(/\D/g, '')
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
@@ -70,9 +118,13 @@ export default function Dashboard() {
     setRenewModal({ isOpen: true, client })
   }
 
-  const handleRenewConfirm = async (clientId: string, duration: number) => {
+  const handleMeasurements = (client: Client) => {
+    setMeasurementsModal({ isOpen: true, client })
+  }
+
+  const handleRenewConfirm = async (clientId: string, duration: number, startDate?: string) => {
     try {
-      await renewClient(clientId, duration)
+      await renewClient(clientId, duration, startDate)
       setToast({
         show: true,
         message: '¡Membresía renovada exitosamente!',
@@ -121,7 +173,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 space-y-6 max-w-md mx-auto">
+    <div className="p-4 pb-20 space-y-6 max-w-md mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -280,6 +332,7 @@ export default function Dashboard() {
                     onWhatsApp={handleWhatsApp}
                     onRenew={handleRenew}
                     onDelete={handleDelete}
+                    onMeasurements={handleMeasurements}
                   />
                 </motion.div>
               ))}
@@ -294,6 +347,13 @@ export default function Dashboard() {
         client={renewModal.client}
         onClose={() => setRenewModal({ isOpen: false, client: null })}
         onRenew={handleRenewConfirm}
+      />
+
+      {/* Measurements Modal */}
+      <MeasurementsModal
+        isOpen={measurementsModal.isOpen}
+        client={measurementsModal.client}
+        onClose={() => setMeasurementsModal({ isOpen: false, client: null })}
       />
 
       {/* Confirm Delete Modal */}

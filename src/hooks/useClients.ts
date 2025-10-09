@@ -33,7 +33,7 @@ export function useClients() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     if (diffDays < 0) return 'expired'
-    if (diffDays <= 7) return 'expiring'
+    if (diffDays <= 3) return 'expiring'
     return 'active'
   }
 
@@ -214,22 +214,31 @@ export function useClients() {
     }
   }
 
-  const renewClient = async (id: string, durationMonths: number): Promise<Client> => {
+  const renewClient = async (id: string, durationMonths: number, startDate?: string): Promise<Client> => {
     if (!user) throw new Error('Usuario no autenticado')
 
     try {
       setError(null)
 
-      const today = new Date()
+      // Usar la fecha proporcionada o la fecha actual
+      let newStartDate: string
+      let startDateObj: Date
 
-      // Formatear fecha de inicio manualmente
-      const startYear = today.getFullYear()
-      const startMonth = String(today.getMonth() + 1).padStart(2, '0')
-      const startDay = String(today.getDate()).padStart(2, '0')
-      const newStartDate = `${startYear}-${startMonth}-${startDay}`
+      if (startDate) {
+        newStartDate = startDate
+        const [year, month, day] = startDate.split('-').map(Number)
+        startDateObj = new Date(year, month - 1, day)
+      } else {
+        const today = new Date()
+        const startYear = today.getFullYear()
+        const startMonth = String(today.getMonth() + 1).padStart(2, '0')
+        const startDay = String(today.getDate()).padStart(2, '0')
+        newStartDate = `${startYear}-${startMonth}-${startDay}`
+        startDateObj = today
+      }
 
       // Calcular fecha final usando fechas locales
-      const endDate = new Date(today)
+      const endDate = new Date(startDateObj)
       endDate.setMonth(endDate.getMonth() + durationMonths)
 
       // Formatear fecha final manualmente

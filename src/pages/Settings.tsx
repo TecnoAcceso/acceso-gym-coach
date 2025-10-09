@@ -62,7 +62,7 @@ export default function Settings() {
   const isSuperUser = user?.username === 'admin' || user?.username === 'superuser'
 
   return (
-    <div className="p-4 max-w-md mx-auto space-y-6">
+    <div className="p-4 pb-20 max-w-md mx-auto space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

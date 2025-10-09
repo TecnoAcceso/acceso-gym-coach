@@ -215,7 +215,7 @@ export default function LicenseManagement() {
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 pb-20 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

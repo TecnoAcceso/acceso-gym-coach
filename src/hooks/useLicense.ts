@@ -20,7 +20,25 @@ export function useLicense() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchLicense = async () => {
-    if (!user || !userProfile) {
+    // Si no hay usuario, NO hay licencia y terminar loading
+    if (!user) {
+      setLicense(null)
+      setLoading(false)
+      return
+    }
+
+    // Si es superuser o admin, NO necesitan licencia (sin necesidad de userProfile)
+    if (user.role === 'superuser' || user.role === 'admin') {
+      console.log(`✅ User role: ${user.role} - No license required`)
+      setLicense(null)
+      setLoading(false)
+      return
+    }
+
+    // Si no hay userProfile después de que user está cargado, no hay licencia
+    if (!userProfile) {
+      console.log('⏳ No user profile - no license check needed')
+      setLicense(null)
       setLoading(false)
       return
     }
@@ -29,13 +47,9 @@ export function useLicense() {
       setLoading(true)
       setError(null)
 
-      // Superusuarios NO necesitan licencia
-      if (user.role === 'superuser') {
-        setLicense(null) // Superusuario sin licencia
-        return
-      }
+      console.log('🔍 Fetching license for trainer:', userProfile.id)
 
-      // Solo usuarios normales necesitan licencia
+      // Solo usuarios normales (trainers) necesitan licencia
       const { data, error } = await supabase
         .from('licenses')
         .select('*')
@@ -47,6 +61,7 @@ export function useLicense() {
       }
 
       setLicense(data || null)
+      console.log(data ? '✅ License found' : '⚠️ No license found')
     } catch (err: any) {
       setError(err.message)
       console.error('Error fetching license:', err)

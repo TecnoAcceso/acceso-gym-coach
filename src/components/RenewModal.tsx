@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Client } from '@/types/client'
 import { X, RefreshCcw, Calendar, Clock } from 'lucide-react'
@@ -7,19 +7,43 @@ interface RenewModalProps {
   isOpen: boolean
   client: Client | null
   onClose: () => void
-  onRenew: (clientId: string, duration: number) => Promise<void>
+  onRenew: (clientId: string, duration: number, startDate?: string) => Promise<void>
 }
 
 export default function RenewModal({ isOpen, client, onClose, onRenew }: RenewModalProps) {
   const [selectedDuration, setSelectedDuration] = useState(1)
+  const [selectedStartDate, setSelectedStartDate] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Calcular fecha mínima (5 días antes de la fecha de vencimiento o hoy)
+  const getMinDate = () => {
+    if (!client) return new Date().toISOString().split('T')[0]
+
+    const [year, month, day] = client.end_date.split('-').map(Number)
+    const endDate = new Date(year, month - 1, day)
+    const fiveDaysBefore = new Date(endDate)
+    fiveDaysBefore.setDate(fiveDaysBefore.getDate() - 5)
+
+    const minYear = fiveDaysBefore.getFullYear()
+    const minMonth = String(fiveDaysBefore.getMonth() + 1).padStart(2, '0')
+    const minDay = String(fiveDaysBefore.getDate()).padStart(2, '0')
+
+    return `${minYear}-${minMonth}-${minDay}`
+  }
+
+  // Precargar con la fecha de vencimiento cuando se abre el modal
+  React.useEffect(() => {
+    if (isOpen && client) {
+      setSelectedStartDate(client.end_date)
+    }
+  }, [isOpen, client])
 
   if (!client) return null
 
   const handleRenew = async () => {
     setIsLoading(true)
     try {
-      await onRenew(client.id, selectedDuration)
+      await onRenew(client.id, selectedDuration, selectedStartDate)
       onClose()
     } catch (error) {
       console.error('Error renovando membresía:', error)
@@ -29,8 +53,9 @@ export default function RenewModal({ isOpen, client, onClose, onRenew }: RenewMo
   }
 
   const calculateNewEndDate = () => {
-    const today = new Date()
-    const newEndDate = new Date(today)
+    const [year, month, day] = selectedStartDate.split('-').map(Number)
+    const startDate = new Date(year, month - 1, day)
+    const newEndDate = new Date(startDate)
     newEndDate.setMonth(newEndDate.getMonth() + selectedDuration)
     return newEndDate.toLocaleDateString('es-ES')
   }
@@ -102,6 +127,23 @@ export default function RenewModal({ isOpen, client, onClose, onRenew }: RenewMo
                   {client.status === 'expired' ? 'Vencido' :
                    client.status === 'expiring' ? 'Por Vencer' : 'Activo'}
                 </p>
+              </div>
+
+              {/* Start Date Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Fecha de Inicio de Renovación
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="date"
+                    value={selectedStartDate}
+                    onChange={(e) => setSelectedStartDate(e.target.value)}
+                    min={getMinDate()}
+                    className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
+                  />
+                </div>
               </div>
 
               {/* Duration Selection */}

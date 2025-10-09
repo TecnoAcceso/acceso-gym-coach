@@ -88,7 +88,7 @@ export default function Login() {
                 type="text"
                 id="username"
                 className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
-                placeholder="tu_usuario"
+                placeholder="Usuario"
               />
               {errors.username && (
                 <p className="mt-1 text-sm text-red-400">{errors.username.message}</p>

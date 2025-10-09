@@ -1,6 +1,6 @@
 {
   "name": "AccesoGym Coach",
-  "short_name": "GymCoach",
+  "short_name": "AccesoGym Coach",
   "description": "Sistema de gestión de membresías para entrenadores personales",
   "start_url": "/",
   "display": "standalone",
