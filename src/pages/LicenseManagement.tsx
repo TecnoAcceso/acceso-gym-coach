@@ -20,7 +20,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Users,
-  XCircle
+  XCircle,
+  Edit,
+  Trash2,
+  RefreshCw
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format, addDays, addMonths, addYears } from 'date-fns'
@@ -63,6 +66,13 @@ export default function LicenseManagement() {
   const [isCreating, setIsCreating] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showUserManagement, setShowUserManagement] = useState(false)
+  const [showRenewModal, setShowRenewModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedLicense, setSelectedLicense] = useState<License | null>(null)
+  const [renewDate, setRenewDate] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -161,6 +171,14 @@ export default function LicenseManagement() {
   const onSubmit = async (data: LicenseForm) => {
     setIsCreating(true)
     try {
+      // Verificar que el usuario no tenga ya una licencia
+      const existingLicense = licenses.find(l => l.trainer_id === data.trainer_id)
+      if (existingLicense) {
+        showToast('Este usuario ya tiene una licencia asignada', 'error')
+        setIsCreating(false)
+        return
+      }
+
       const { error } = await supabase
         .from('licenses')
         .insert({
@@ -181,6 +199,138 @@ export default function LicenseManagement() {
     } finally {
       setIsCreating(false)
     }
+  }
+
+  const handleRenewLicense = async () => {
+    if (!selectedLicense || !renewDate) {
+      showToast('Por favor selecciona una fecha', 'error')
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      const { error } = await supabase
+        .from('licenses')
+        .update({ expiry_date: renewDate })
+        .eq('id', selectedLicense.id)
+
+      if (error) throw error
+
+      showToast('¡Licencia renovada exitosamente!', 'success')
+      setShowRenewModal(false)
+      setSelectedLicense(null)
+      setRenewDate('')
+      await fetchLicenses()
+    } catch (error: any) {
+      showToast(error.message || 'Error al renovar licencia', 'error')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleEditLicense = async () => {
+    if (!selectedLicense || !editDate) {
+      showToast('Por favor selecciona una fecha', 'error')
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      const { error } = await supabase
+        .from('licenses')
+        .update({ expiry_date: editDate })
+        .eq('id', selectedLicense.id)
+
+      if (error) throw error
+
+      showToast('¡Licencia editada exitosamente!', 'success')
+      setShowEditModal(false)
+      setSelectedLicense(null)
+      setEditDate('')
+      await fetchLicenses()
+    } catch (error: any) {
+      showToast(error.message || 'Error al editar licencia', 'error')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const openDeleteModal = (license: License) => {
+    setSelectedLicense(license)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteLicense = async () => {
+    if (!selectedLicense) return
+
+    setIsProcessing(true)
+    try {
+      const { error } = await supabase
+        .from('licenses')
+        .delete()
+        .eq('id', selectedLicense.id)
+
+      if (error) throw error
+
+      showToast('¡Licencia eliminada exitosamente!', 'success')
+      setShowDeleteModal(false)
+      setSelectedLicense(null)
+      await fetchLicenses()
+    } catch (error: any) {
+      showToast(error.message || 'Error al eliminar licencia', 'error')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const openRenewModal = (license: License) => {
+    setSelectedLicense(license)
+    setRenewDate(license.expiry_date)
+    setShowRenewModal(true)
+  }
+
+  const openEditModal = (license: License) => {
+    setSelectedLicense(license)
+    setEditDate(license.expiry_date)
+    setShowEditModal(true)
+  }
+
+  const quickSetRenewDate = (period: 'month' | 'year' | '2years') => {
+    const today = new Date()
+    let expiryDate: Date
+
+    switch (period) {
+      case 'month':
+        expiryDate = addMonths(today, 1)
+        break
+      case 'year':
+        expiryDate = addYears(today, 1)
+        break
+      case '2years':
+        expiryDate = addYears(today, 2)
+        break
+    }
+
+    setRenewDate(expiryDate.toISOString().split('T')[0])
+  }
+
+  const quickSetEditDate = (period: 'month' | 'year' | '2years') => {
+    const today = new Date()
+    let expiryDate: Date
+
+    switch (period) {
+      case 'month':
+        expiryDate = addMonths(today, 1)
+        break
+      case 'year':
+        expiryDate = addYears(today, 1)
+        break
+      case '2years':
+        expiryDate = addYears(today, 2)
+        break
+    }
+
+    setEditDate(expiryDate.toISOString().split('T')[0])
   }
 
   React.useEffect(() => {
@@ -375,11 +525,13 @@ export default function LicenseManagement() {
                   className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
                 >
                   <option value="">Selecciona un usuario...</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.full_name} (@{user.username}) - {user.role}
-                    </option>
-                  ))}
+                  {users
+                    .filter(user => !licenses.some(license => license.trainer_id === user.id))
+                    .map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.full_name} (@{user.username}) - {user.role}
+                      </option>
+                    ))}
                 </select>
               </div>
               {errors.trainer_id && (
@@ -536,7 +688,7 @@ export default function LicenseManagement() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mb-4">
                     <div>
                       <p className="text-slate-400 mb-1">Clave de Licencia</p>
                       <p className="text-white font-mono">{license.license_key}</p>
@@ -566,12 +718,343 @@ export default function LicenseManagement() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-end space-x-2 pt-3 border-t border-white/5">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => openRenewModal(license)}
+                      className="px-3 py-1.5 bg-green-600/20 border border-green-600/30 rounded-lg text-green-400 hover:bg-green-600/30 transition-all duration-300 flex items-center space-x-1.5 text-xs"
+                      title="Renovar licencia"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Renovar</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => openEditModal(license)}
+                      className="px-3 py-1.5 bg-blue-600/20 border border-blue-600/30 rounded-lg text-blue-400 hover:bg-blue-600/30 transition-all duration-300 flex items-center space-x-1.5 text-xs"
+                      title="Editar licencia"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => openDeleteModal(license)}
+                      className="px-3 py-1.5 bg-red-600/20 border border-red-600/30 rounded-lg text-red-400 hover:bg-red-600/30 transition-all duration-300 flex items-center space-x-1.5 text-xs"
+                      title="Eliminar licencia"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar</span>
+                    </motion.button>
+                  </div>
                 </motion.div>
               )
             })}
           </div>
         )}
       </motion.div>
+
+      {/* Renew License Modal */}
+      {showRenewModal && selectedLicense && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-dark-300 rounded-2xl border border-white/10 p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Renovar Licencia</h3>
+                <p className="text-sm text-slate-400">{selectedLicense.user_profile?.full_name}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Fecha de Expiración Actual
+                </label>
+                <div className="px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-slate-400">
+                  {format(new Date(selectedLicense.expiry_date), 'dd MMM yyyy', { locale: es })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Nueva Fecha de Expiración
+                </label>
+                <div className="space-y-3">
+                  <div className="flex space-x-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => quickSetRenewDate('month')}
+                      className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-slate-300 hover:bg-dark-200/70 transition-all text-sm"
+                    >
+                      +1 Mes
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => quickSetRenewDate('year')}
+                      className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-slate-300 hover:bg-dark-200/70 transition-all text-sm"
+                    >
+                      +1 Año
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => quickSetRenewDate('2years')}
+                      className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-slate-300 hover:bg-dark-200/70 transition-all text-sm"
+                    >
+                      +2 Años
+                    </motion.button>
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="date"
+                      value={renewDate}
+                      onChange={(e) => setRenewDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setShowRenewModal(false)
+                  setSelectedLicense(null)
+                  setRenewDate('')
+                }}
+                className="flex-1 py-3 px-4 bg-dark-200/50 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-dark-200/70 transition-all duration-300"
+                disabled={isProcessing}
+              >
+                Cancelar
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleRenewLicense}
+                disabled={isProcessing || !renewDate}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isProcessing ? 'Renovando...' : 'Renovar Licencia'}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit License Modal */}
+      {showEditModal && selectedLicense && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-dark-300 rounded-2xl border border-white/10 p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                <Edit className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Editar Licencia</h3>
+                <p className="text-sm text-slate-400">{selectedLicense.user_profile?.full_name}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Clave de Licencia
+                </label>
+                <div className="px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-slate-400 font-mono">
+                  {selectedLicense.license_key}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Fecha de Expiración Actual
+                </label>
+                <div className="px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-slate-400">
+                  {format(new Date(selectedLicense.expiry_date), 'dd MMM yyyy', { locale: es })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Nueva Fecha de Expiración
+                </label>
+                <div className="space-y-3">
+                  <div className="flex space-x-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => quickSetEditDate('month')}
+                      className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-slate-300 hover:bg-dark-200/70 transition-all text-sm"
+                    >
+                      +1 Mes
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => quickSetEditDate('year')}
+                      className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-slate-300 hover:bg-dark-200/70 transition-all text-sm"
+                    >
+                      +1 Año
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => quickSetEditDate('2years')}
+                      className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-slate-300 hover:bg-dark-200/70 transition-all text-sm"
+                    >
+                      +2 Años
+                    </motion.button>
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setShowEditModal(false)
+                  setSelectedLicense(null)
+                  setEditDate('')
+                }}
+                className="flex-1 py-3 px-4 bg-dark-200/50 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-dark-200/70 transition-all duration-300"
+                disabled={isProcessing}
+              >
+                Cancelar
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleEditLicense}
+                disabled={isProcessing || !editDate}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isProcessing ? 'Guardando...' : 'Guardar Cambios'}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedLicense && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-dark-300 rounded-2xl border border-red-500/20 p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Confirmar Eliminación</h3>
+                <p className="text-sm text-slate-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-white mb-2">
+                  ¿Estás seguro de eliminar la licencia de:
+                </p>
+                <p className="text-lg font-semibold text-red-400">
+                  {selectedLicense.user_profile?.full_name}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  @{selectedLicense.user_profile?.username}
+                </p>
+              </div>
+
+              <div className="space-y-2 text-sm text-slate-400">
+                <div className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                  <span>Se eliminará permanentemente de la base de datos</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                  <span>El usuario podrá recibir una nueva licencia</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                  <span>Esta acción no se puede revertir</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setSelectedLicense(null)
+                }}
+                className="flex-1 py-3 px-4 bg-dark-200/50 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-dark-200/70 transition-all duration-300"
+                disabled={isProcessing}
+              >
+                Cancelar
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleDeleteLicense}
+                disabled={isProcessing}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-red-500 to-red-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isProcessing ? 'Eliminando...' : 'Eliminar Licencia'}</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* User Management Modal */}
       {showUserManagement && (

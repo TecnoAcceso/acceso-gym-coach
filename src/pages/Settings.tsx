@@ -3,18 +3,21 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
 import { useClients } from '@/hooks/useClients'
-import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon } from 'lucide-react'
+import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Toast, { ToastType } from '@/components/Toast'
+import { supabase } from '@/lib/supabase'
+import { exportClientsToExcel } from '@/utils/exportToExcel'
 
 export default function Settings() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const { license } = useLicense()
-  const { clearState } = useClients()
+  const { clients, clearState } = useClients()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -56,6 +59,37 @@ export default function Settings() {
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'dd \'de\' MMMM \'de\' yyyy', { locale: es })
+  }
+
+  const handleExportToExcel = async () => {
+    if (!user?.id || clients.length === 0) {
+      showToast('No hay clientes para exportar', 'error')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      // Obtener todas las mediciones de todos los clientes
+      const clientIds = clients.map(c => c.id)
+
+      const { data: measurements, error } = await supabase
+        .from('measurements')
+        .select('*')
+        .in('client_id', clientIds)
+        .order('date', { ascending: false })
+
+      if (error) throw error
+
+      // Exportar a Excel
+      await exportClientsToExcel(clients, measurements || [])
+
+      showToast('¡Backup exportado exitosamente!', 'success')
+    } catch (error: any) {
+      console.error('Error al exportar:', error)
+      showToast(error.message || 'Error al exportar datos', 'error')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   // Simular verificación de superusuario
@@ -206,11 +240,69 @@ export default function Settings() {
         </div>
       </motion.div>
 
-      {/* Developer Info */}
+      {/* Backup Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center space-x-3 mb-4">
+          <Database className="w-6 h-6 text-accent-primary" />
+          <div>
+            <h3 className="font-semibold text-white">Respaldo de Datos</h3>
+            <p className="text-xs text-slate-400">Exporta todos tus clientes y mediciones</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-xs text-blue-400 leading-relaxed">
+              El backup incluye:
+            </p>
+            <ul className="text-xs text-blue-300 mt-2 space-y-1 ml-4">
+              <li>• Información personal de clientes</li>
+              <li>• Datos antropométricos (peso, altura)</li>
+              <li>• Condiciones médicas</li>
+              <li>• Historial de membresías</li>
+              <li>• Todas las mediciones corporales</li>
+            </ul>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: isExporting ? 1 : 1.02 }}
+            whileTap={{ scale: isExporting ? 1 : 0.98 }}
+            onClick={handleExportToExcel}
+            disabled={isExporting || clients.length === 0}
+            className={`w-full py-3 px-4 bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 text-green-400 font-medium rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
+              isExporting || clients.length === 0
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-green-500/30'
+            }`}
+          >
+            <Download className={`w-5 h-5 ${isExporting ? 'animate-bounce' : ''}`} />
+            <span>
+              {isExporting
+                ? 'Exportando...'
+                : clients.length === 0
+                  ? 'No hay datos para exportar'
+                  : `Descargar Backup (${clients.length} ${clients.length === 1 ? 'cliente' : 'clientes'})`
+              }
+            </span>
+          </motion.button>
+
+          <p className="text-xs text-slate-400 text-center leading-relaxed">
+            El archivo Excel se descargará automáticamente con el nombre
+            <span className="text-accent-primary font-medium"> Backup_Clientes_[fecha].xlsx</span>
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Developer Info */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
         className="text-center text-sm text-slate-400"
       >
       </motion.div>
