@@ -214,7 +214,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }
 
-    // Refresh session on window focus/visibility (después de reposo)
+    initAuth()
+
+    return () => {
+      isMounted = false
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
+  }, [])
+
+  // Refresh session on window focus/visibility (después de reposo)
+  useEffect(() => {
     const handleWindowFocus = async () => {
       // Solo intentar refrescar si ya hay una sesión activa
       if (!user) {
@@ -239,7 +250,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return
         }
 
-        if (session?.user && isMounted) {
+        if (session?.user) {
           console.log('✅ Session refreshed successfully')
           setSession(session)
           // En refresh, usar skipRetry=true para no hacer múltiples intentos
@@ -262,17 +273,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     window.addEventListener('focus', handleWindowFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    initAuth()
-
     return () => {
-      isMounted = false
       window.removeEventListener('focus', handleWindowFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (subscription) {
-        subscription.unsubscribe()
-      }
     }
-  }, [])
+  }, [user])
 
   const signIn = async (username: string, password: string) => {
     setLoading(true)

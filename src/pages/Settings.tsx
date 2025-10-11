@@ -164,7 +164,7 @@ export default function Settings() {
             className="w-full py-3 px-4 bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-400 font-medium rounded-lg hover:bg-purple-500/30 transition-all duration-300 flex items-center justify-center space-x-2"
           >
             <Shield className="w-5 h-5" />
-            <span>Gestión de Licencias</span>
+            <span>Licencias</span>
           </motion.button>
 
           <p className="text-xs text-slate-400 mt-3 text-center">

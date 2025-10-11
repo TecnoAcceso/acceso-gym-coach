@@ -294,15 +294,8 @@ export function useClients() {
     } else {
       clearState()
     }
-  }, [user?.id, fetchClients, clearState])
-
-  // Limpiar estado cuando el componente se desmonte o usuario cambie
-  useEffect(() => {
-    return () => {
-      console.log('🧹 Hook useClients desmontando - limpiando estado')
-      clearState()
-    }
-  }, [clearState])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   return {
     clients,
