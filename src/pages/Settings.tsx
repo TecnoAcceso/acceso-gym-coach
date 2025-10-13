@@ -3,13 +3,27 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
 import { useClients } from '@/hooks/useClients'
-import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download } from 'lucide-react'
+import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Toast, { ToastType } from '@/components/Toast'
 import { supabase } from '@/lib/supabase'
 import { exportClientsToExcel } from '@/utils/exportToExcel'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(6, 'Mínimo 6 caracteres'),
+  newPassword: z.string().min(6, 'Mínimo 6 caracteres'),
+  confirmPassword: z.string().min(6, 'Mínimo 6 caracteres'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
+})
+
+type ChangePasswordForm = z.infer<typeof changePasswordSchema>
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -18,14 +32,84 @@ export default function Settings() {
   const { clients, clearState } = useClients()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
     type: ToastType
   }>({ show: false, message: '', type: 'success' })
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset: resetForm,
+  } = useForm<ChangePasswordForm>({
+    resolver: zodResolver(changePasswordSchema),
+  })
+
   const showToast = (message: string, type: ToastType) => {
     setToast({ show: true, message, type })
+  }
+
+  const onChangePassword = async (data: ChangePasswordForm) => {
+    if (!user) return
+
+    setIsChangingPassword(true)
+    try {
+      // Construir el email basado en el username (igual que en signIn)
+      const knownEmails: Record<string, string> = {
+        'admin': 'tecnoacceso2025@gmail.com'
+      }
+
+      const email = knownEmails[user.username || ''] || `${user.username}@gmail.com`
+
+      // Verificar contraseña actual intentando iniciar sesión
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: data.currentPassword,
+      })
+
+      if (signInError) {
+        throw new Error('La contraseña actual es incorrecta')
+      }
+
+      // Obtener el perfil del usuario para conseguir su ID
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, username, full_name, role, phone')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (profileError) throw profileError
+
+      // Actualizar contraseña usando la función RPC
+      const { data: result, error } = await supabase.rpc('update_user_profile', {
+        profile_id: profileData.id,
+        new_username: profileData.username,
+        new_full_name: profileData.full_name,
+        new_role: profileData.role,
+        new_phone: profileData.phone || null,
+        new_password: data.newPassword
+      })
+
+      if (error) throw error
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error al cambiar contraseña')
+      }
+
+      resetForm()
+      showToast('¡Contraseña actualizada exitosamente!', 'success')
+    } catch (err: any) {
+      console.error('Error changing password:', err)
+      showToast(err.message || 'Error al cambiar contraseña', 'error')
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   const handleSignOut = async () => {
@@ -144,6 +228,111 @@ export default function Settings() {
         </motion.button>
       </motion.div>
 
+      {/* Change Password Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center space-x-3 mb-4">
+          <Lock className="w-6 h-6 text-accent-primary" />
+          <div>
+            <h3 className="font-semibold text-white">Cambiar Contraseña</h3>
+            <p className="text-xs text-slate-400">Actualiza tu contraseña de acceso</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit(onChangePassword)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Contraseña Actual
+            </label>
+            <div className="relative">
+              <input
+                {...register('currentPassword')}
+                type={showCurrentPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 pr-12 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-accent-primary transition-colors"
+              >
+                {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {errors.currentPassword && (
+              <p className="mt-1 text-sm text-red-400">{errors.currentPassword.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Nueva Contraseña
+            </label>
+            <div className="relative">
+              <input
+                {...register('newPassword')}
+                type={showNewPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 pr-12 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-accent-primary transition-colors"
+              >
+                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {errors.newPassword && (
+              <p className="mt-1 text-sm text-red-400">{errors.newPassword.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Confirmar Nueva Contraseña
+            </label>
+            <div className="relative">
+              <input
+                {...register('confirmPassword')}
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 pr-12 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-accent-primary transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {errors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-400">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+
+          <motion.button
+            whileHover={{ scale: isChangingPassword ? 1 : 1.02 }}
+            whileTap={{ scale: isChangingPassword ? 1 : 0.98 }}
+            type="submit"
+            disabled={isChangingPassword}
+            className={`w-full py-3 px-4 bg-gradient-to-r from-accent-primary to-accent-secondary text-white font-medium rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
+              isChangingPassword
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:shadow-lg hover:shadow-accent-primary/30'
+            }`}
+          >
+            <Lock className="w-5 h-5" />
+            <span>{isChangingPassword ? 'Actualizando...' : 'Actualizar Contraseña'}</span>
+          </motion.button>
+        </form>
+      </motion.div>
+
       {/* SuperUser Section */}
       {isSuperUser && (
         <motion.div
@@ -164,7 +353,7 @@ export default function Settings() {
             className="w-full py-3 px-4 bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-400 font-medium rounded-lg hover:bg-purple-500/30 transition-all duration-300 flex items-center justify-center space-x-2"
           >
             <Shield className="w-5 h-5" />
-            <span>Licencias</span>
+            <span>Licencias / Usuarios</span>
           </motion.button>
 
           <p className="text-xs text-slate-400 mt-3 text-center">

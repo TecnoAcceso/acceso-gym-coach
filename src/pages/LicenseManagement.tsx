@@ -23,7 +23,8 @@ import {
   XCircle,
   Edit,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  MessageCircle
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format, addDays, addMonths, addYears } from 'date-fns'
@@ -44,6 +45,7 @@ interface UserProfile {
   username: string
   full_name: string
   role: 'trainer' | 'admin' | 'superuser'
+  phone?: string
   created_at: string
 }
 
@@ -146,7 +148,8 @@ export default function LicenseManagement() {
             id,
             username,
             full_name,
-            role
+            role,
+            phone
           )
         `)
         .order('created_at', { ascending: false })
@@ -364,6 +367,32 @@ export default function LicenseManagement() {
     return diffDays
   }
 
+  const sendWhatsAppReminder = (license: License) => {
+    const daysRemaining = calculateDaysRemaining(license.expiry_date)
+    const userName = license.user_profile?.full_name || 'Usuario'
+    const userPhone = license.user_profile?.phone
+
+    if (!userPhone) {
+      showToast('Este usuario no tiene número de teléfono registrado', 'error')
+      return
+    }
+
+    // Remover el + del número para WhatsApp
+    const phoneNumber = userPhone.replace('+', '')
+
+    let message = ''
+    if (daysRemaining <= 0) {
+      message = `Hola ${userName},\n\n⚠️ Tu licencia de AccesoGymCoach ha *vencido*.\n\nPara seguir disfrutando de nuestros servicios, por favor renueva tu licencia lo antes posible.\n\n¡Gracias por confiar en nosotros! 💪\n\nAtt: Soporte AccesoGymCoach\n\n---\n_Powered by TecnoAcceso / ElectroShop_`
+    } else if (daysRemaining <= 3) {
+      message = `Hola ${userName},\n\n⏰ Tu licencia de AccesoGymCoach está *por vencer*.\n\n📅 Te quedan *${daysRemaining} ${daysRemaining === 1 ? 'día' : 'días'}* para renovar.\n\nRenueva ahora para continuar sin interrupciones.\n\n¡Gracias por confiar en nosotros! 💪\n\nAtt: Soporte AccesoGymCoach\n\n---\n_Powered by TecnoAcceso / ElectroShop_`
+    } else {
+      message = `Hola ${userName},\n\n✅ Tu licencia de AccesoGymCoach está activa.\n\n📅 Te quedan *${daysRemaining} días* hasta su vencimiento (${format(new Date(license.expiry_date), 'dd/MM/yyyy')}).\n\nSi tienes alguna duda, no dudes en contactarnos.\n\n¡Gracias por confiar en nosotros! 💪\n\nAtt: Soporte AccesoGymCoach\n\n---\n_Powered by TecnoAcceso / ElectroShop_`
+    }
+
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+  }
+
   return (
     <div className="p-4 pb-20 max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -380,8 +409,8 @@ export default function LicenseManagement() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white">Gestión de Licencias</h1>
-            <p className="text-sm text-slate-400">Panel de administración del superusuario</p>
+            <h1 className="text-2xl font-bold text-white">Usuarios  Licencias</h1>
+            <p className="text-sm text-slate-400">Panel de administración</p>
           </div>
         </div>
 
@@ -449,7 +478,10 @@ export default function LicenseManagement() {
             <div>
               <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Activas</p>
               <p className="text-xl font-bold text-white">
-                {licenses.filter(l => l.status === 'active').length}
+                {licenses.filter(l => {
+                  const daysRemaining = Math.ceil((new Date(l.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                  return daysRemaining > 3
+                }).length}
               </p>
             </div>
           </div>
@@ -470,7 +502,7 @@ export default function LicenseManagement() {
               <p className="text-xl font-bold text-white">
                 {licenses.filter(l => {
                   const daysRemaining = Math.ceil((new Date(l.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                  return daysRemaining > 0 && daysRemaining <= 30
+                  return daysRemaining > 0 && daysRemaining <= 3
                 }).length}
               </p>
             </div>
@@ -680,10 +712,18 @@ export default function LicenseManagement() {
                       </div>
                     </div>
 
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${getStatusColor(license.status)}`}>
-                      {getStatusIcon(license.status)}
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${
+                      daysRemaining <= 0 ? getStatusColor('expired') :
+                      daysRemaining <= 3 ? getStatusColor('expiring') :
+                      getStatusColor('active')
+                    }`}>
+                      {daysRemaining <= 0 ? getStatusIcon('expired') :
+                       daysRemaining <= 3 ? getStatusIcon('expiring') :
+                       getStatusIcon('active')}
                       <span>
-                        {license.status === 'active' ? 'Activa' : 'Vencida'}
+                        {daysRemaining <= 0 ? 'Vencida' :
+                         daysRemaining <= 3 ? 'Por Vencer' :
+                         'Activa'}
                       </span>
                     </div>
                   </div>
@@ -704,7 +744,7 @@ export default function LicenseManagement() {
                     <div>
                       <p className="text-slate-400 mb-1">Días Restantes</p>
                       <p className={`font-medium ${
-                        daysRemaining > 30 ? 'text-status-active' :
+                        daysRemaining > 3 ? 'text-status-active' :
                         daysRemaining > 0 ? 'text-status-warning' : 'text-status-expired'
                       }`}>
                         {daysRemaining > 0 ? `${daysRemaining} días` : 'Vencida'}
@@ -720,38 +760,52 @@ export default function LicenseManagement() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center justify-end space-x-2 pt-3 border-t border-white/5">
+                  <div className={`grid gap-1.5 pt-3 border-t border-white/5 ${license.user_profile?.phone ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                    {/* Botón de WhatsApp */}
+                    {license.user_profile?.phone && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => sendWhatsAppReminder(license)}
+                        className={`flex items-center justify-center p-2 rounded-lg transition-all duration-200 ${
+                          daysRemaining <= 3 && daysRemaining > 0
+                            ? 'bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 animate-pulse'
+                            : 'bg-slate-600/20 border border-slate-600/30 text-slate-400 hover:bg-slate-600/30'
+                        }`}
+                        title={`Enviar recordatorio por WhatsApp a ${license.user_profile?.phone}`}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </motion.button>
+                    )}
+
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => openRenewModal(license)}
-                      className="px-3 py-1.5 bg-green-600/20 border border-green-600/30 rounded-lg text-green-400 hover:bg-green-600/30 transition-all duration-300 flex items-center space-x-1.5 text-xs"
+                      className="flex items-center justify-center p-2 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 hover:bg-green-500/30 transition-all duration-200"
                       title="Renovar licencia"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Renovar</span>
+                      <RefreshCw className="w-4 h-4" />
                     </motion.button>
 
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => openEditModal(license)}
-                      className="px-3 py-1.5 bg-blue-600/20 border border-blue-600/30 rounded-lg text-blue-400 hover:bg-blue-600/30 transition-all duration-300 flex items-center space-x-1.5 text-xs"
+                      className="flex items-center justify-center p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all duration-200"
                       title="Editar licencia"
                     >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span>Editar</span>
+                      <Edit className="w-4 h-4" />
                     </motion.button>
 
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => openDeleteModal(license)}
-                      className="px-3 py-1.5 bg-red-600/20 border border-red-600/30 rounded-lg text-red-400 hover:bg-red-600/30 transition-all duration-300 flex items-center space-x-1.5 text-xs"
+                      className="flex items-center justify-center p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all duration-200"
                       title="Eliminar licencia"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Eliminar</span>
+                      <Trash2 className="w-4 h-4" />
                     </motion.button>
                   </div>
                 </motion.div>

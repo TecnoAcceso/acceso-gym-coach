@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
@@ -46,52 +46,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
+  const lastProcessedUserId = useRef<string | null>(null)
 
-  const setUserWithProfile = async (authUser: User | null, retryCount = 0, skipRetry = false) => {
+  const setUserWithProfile = async (authUser: User | null) => {
     if (authUser) {
       try {
-        console.log(`🔍 Loading profile for user: ${authUser.id} (Attempt ${retryCount + 1}/3)`)
+        // Si ya tenemos el perfil cargado para este usuario, usarlo
+        if (userProfile && userProfile.auth_user_id === authUser.id) {
+          console.log('✅ Using cached profile')
+          setUser({
+            ...authUser,
+            username: userProfile.username,
+            full_name: userProfile.full_name,
+            role: userProfile.role,
+          })
+          return
+        }
 
-        // Timeout de 30 segundos para la consulta
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Profile query timeout')), 30000)
-        })
+        console.log(`🔍 Loading profile for user: ${authUser.id}`)
 
-        const queryPromise = supabase
+        const { data: profile, error } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('auth_user_id', authUser.id)
           .single()
 
-        const { data: profile, error } = await Promise.race([queryPromise, timeoutPromise]) as any
-
         if (error || !profile) {
           console.error('❌ Profile not found:', error)
-
-          // Si es error de timeout y tenemos intentos restantes (solo en init, no en refresh)
-          if (error?.message === 'Profile query timeout' && retryCount < 2 && !skipRetry) {
-            console.log(`🔄 Retrying profile load... (${retryCount + 1}/2)`)
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            return setUserWithProfile(authUser, retryCount + 1, skipRetry)
-          }
-
-          // Si es timeout pero ya tenemos un perfil cargado previamente, mantenerlo
-          if (error?.message === 'Profile query timeout' && userProfile) {
-            console.log('⚠️ Profile timeout but using cached profile')
-            return
-          }
-
-          // Solo si realmente no hay perfil (no es timeout), crear perfil temporal
-          if (error?.code === 'PGRST116' || retryCount >= 2 || skipRetry) {
-            console.warn('⚠️ Using temporary profile - profile not found in database')
-            setUser({
-              ...authUser,
-              username: authUser.email?.split('@')[0] || 'user',
-              full_name: authUser.email || 'Unknown User',
-              role: 'trainer',
-            })
-            setUserProfile(null)
-          }
+          setUser({
+            ...authUser,
+            username: authUser.email?.split('@')[0] || 'user',
+            full_name: authUser.email || 'Unknown User',
+            role: 'trainer',
+          })
+          setUserProfile(null)
           return
         }
 
@@ -105,22 +94,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       } catch (err) {
         console.error('❌ Error loading profile:', err)
-
-        // Si es timeout pero ya tenemos un perfil cargado, mantenerlo
-        if (userProfile) {
-          console.log('⚠️ Error but using cached profile')
-          return
-        }
-
-        // Retry en caso de error de red (solo en init, no en refresh)
-        if (retryCount < 2 && !skipRetry) {
-          console.log(`🔄 Retrying after error... (${retryCount + 1}/2)`)
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          return setUserWithProfile(authUser, retryCount + 1, skipRetry)
-        }
-
-        // Solo después de 3 intentos fallidos, usar perfil temporal
-        console.warn('⚠️ Using temporary profile after 3 failed attempts')
         setUser({
           ...authUser,
           username: authUser.email?.split('@')[0] || 'user',
@@ -141,26 +114,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const initAuth = async () => {
       try {
-        console.log('🚀 Initializing auth...')
-
-        // Verificar variables de entorno
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-        if (!supabaseUrl || !supabaseKey) {
-          console.error('Missing environment variables')
-          setLoading(false)
-          return
-        }
-
-        // Timeout para toda la inicialización
-        const initTimeout = setTimeout(() => {
-          console.log('⏰ Auth initialization timeout - proceeding anyway')
-          if (isMounted) {
-            setLoading(false)
-          }
-        }, 15000)
-
         // Obtener sesión inicial
         const { data: { session }, error } = await supabase.auth.getSession()
 
@@ -168,41 +121,75 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (error) {
           console.error('❌ Error getting session:', error)
-
-          // Si es un error de refresh token, limpiar el storage y recargar
           if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
-            console.log('Clearing corrupted auth data...')
             localStorage.clear()
             sessionStorage.clear()
             window.location.reload()
             return
           }
-
-          clearTimeout(initTimeout)
           setLoading(false)
           return
         }
 
-        console.log('📋 Session status:', session ? 'Active' : 'None')
         setSession(session)
         if (session?.user) {
+          lastProcessedUserId.current = session.user.id
           await setUserWithProfile(session.user)
         }
 
-        clearTimeout(initTimeout)
         setLoading(false)
+        setInitialized(true)
 
         // Escuchar cambios de autenticación
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           if (!isMounted) return
-          setSession(session)
-          if (session?.user) {
+
+          console.log('🔔 Auth state change:', event)
+
+          // IGNORAR INITIAL_SESSION - ya lo manejamos en el init
+          if (event === 'INITIAL_SESSION') {
+            console.log('ℹ️ Initial session - already handled in init')
+            return
+          }
+
+          // IGNORAR TOKEN_REFRESHED - solo actualizar sesión sin recargar perfil
+          if (event === 'TOKEN_REFRESHED') {
+            console.log('🔄 Token refreshed - keeping current state')
+            setSession(session)
+            return
+          }
+
+          // SIGNED_IN = nuevo login (solo si NO lo hemos procesado ya)
+          if (event === 'SIGNED_IN' && session?.user) {
+            // Si ya procesamos este usuario, NO recargar
+            if (lastProcessedUserId.current === session.user.id) {
+              console.log('✅ Sign in for already processed user - keeping current state')
+              setSession(session)
+              return
+            }
+
+            console.log('✅ Sign in detected - loading profile')
+            lastProcessedUserId.current = session.user.id
+            setSession(session)
             await setUserWithProfile(session.user)
-          } else {
+            setLoading(false)
+            return
+          }
+
+          // SIGNED_OUT = logout
+          if (event === 'SIGNED_OUT') {
+            console.log('🚪 User signed out')
+            lastProcessedUserId.current = null
             setUser(null)
             setUserProfile(null)
+            setSession(null)
+            setLoading(false)
+            return
           }
-          setLoading(false)
+
+          // Otros eventos - solo actualizar sesión
+          console.log('ℹ️ Other auth event, updating session only')
+          setSession(session)
         })
 
         subscription = authSubscription
@@ -224,63 +211,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [])
 
-  // Refresh session on window focus/visibility (después de reposo)
-  useEffect(() => {
-    const handleWindowFocus = async () => {
-      // Solo intentar refrescar si ya hay una sesión activa
-      if (!user) {
-        console.log('👁️ Window focused but no active session - skipping refresh')
-        return
-      }
-
-      console.log('👁️ Window focused - refreshing session...')
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error('❌ Error refreshing session on focus:', error)
-
-          // Si hay error de token, limpiar y recargar
-          if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
-            console.log('Clearing corrupted auth data...')
-            localStorage.clear()
-            sessionStorage.clear()
-            window.location.reload()
-          }
-          return
-        }
-
-        if (session?.user) {
-          console.log('✅ Session refreshed successfully')
-          setSession(session)
-          // En refresh, usar skipRetry=true para no hacer múltiples intentos
-          await setUserWithProfile(session.user, 0, true)
-        }
-      } catch (error) {
-        console.error('❌ Error in focus handler:', error)
-      }
-    }
-
-    // Detectar cuando la página vuelve a ser visible (mejor para móviles)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user) {
-        console.log('📱 Page became visible - refreshing session...')
-        handleWindowFocus()
-      }
-    }
-
-    // Agregar listeners para window focus y visibility
-    window.addEventListener('focus', handleWindowFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      window.removeEventListener('focus', handleWindowFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [user])
+  // Supabase maneja el refresh de tokens automáticamente
+  // No necesitamos listeners adicionales
 
   const signIn = async (username: string, password: string) => {
-    setLoading(true)
+    console.log('🔐 signIn llamado para username:', username)
+
+    // NO establecer loading aquí, lo maneja el componente Login
+    // setLoading(true)
 
     try {
       let email = ''
@@ -298,14 +236,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
         email = `${username}@gmail.com`
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('📧 Intentando login con email:', email)
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      console.log('📦 Respuesta de Supabase recibida')
+      console.log('📦 Error:', error)
+      console.log('📦 Data:', data)
+
+      if (error) {
+        console.error('❌ Error de Supabase:', error)
+        console.error('❌ Error.message:', error.message)
+        console.error('❌ Error.status:', error.status)
+
+        // Mensaje más amigable para el usuario
+        if (error.message.includes('Invalid login credentials')) {
+          console.log('🚨 Lanzando error: Usuario o contraseña incorrectos')
+          throw new Error('Usuario o contraseña incorrectos')
+        }
+        console.log('🚨 Lanzando error original')
+        throw error
+      }
+
+      if (!data.session) {
+        console.error('❌ No hay sesión en la respuesta')
+        throw new Error('No se pudo iniciar sesión')
+      }
+
+      console.log('✅ Login exitoso, sesión creada')
+      // El loading se manejará en el efecto de onAuthStateChange
     } catch (error) {
-      setLoading(false)
+      console.error('❌ Error en catch de signIn:', error)
+      console.error('❌ Tipo de error:', typeof error)
+      console.error('❌ Error instanceof Error:', error instanceof Error)
+
+      // Asegurarse de que el error se propague correctamente
       throw error
     }
   }
@@ -315,6 +283,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🚪 Iniciando logout...')
 
       // Limpiar estado local inmediatamente para evitar problemas de UI
+      lastProcessedUserId.current = null
       setUser(null)
       setUserProfile(null)
       setSession(null)
@@ -338,6 +307,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('❌ Error crítico durante logout:', error)
       // En caso de error crítico, forzar redirección
+      lastProcessedUserId.current = null
       setUser(null)
       setUserProfile(null)
       setSession(null)
@@ -347,14 +317,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const value = {
-    user,
+  // Estabilizar el objeto user para evitar re-renders innecesarios
+  const stableUser = useMemo(() => user, [user?.id, user?.username, user?.full_name, user?.role])
+
+  const value = useMemo(() => ({
+    user: stableUser,
     userProfile,
     session,
     loading,
     signIn,
     signOut,
-  }
+  }), [stableUser, userProfile, session, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

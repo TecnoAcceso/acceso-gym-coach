@@ -12,6 +12,7 @@ import RenewModal from '@/components/RenewModal'
 import MeasurementsModal from '@/components/MeasurementsModal'
 import Toast, { ToastType } from '@/components/Toast'
 import ConfirmModal from '@/components/ConfirmModal'
+import WhatsNewModal from '@/components/WhatsNewModal'
 import { Plus, Users, AlertTriangle, XCircle, Search } from 'lucide-react'
 
 export default function Dashboard() {
@@ -379,6 +380,9 @@ _Powered by TecnoAcceso / ElectroShop_`
         type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
       />
+
+      {/* What's New Modal */}
+      <WhatsNewModal />
     </div>
   )
 }

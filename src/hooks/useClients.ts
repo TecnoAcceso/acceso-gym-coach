@@ -38,9 +38,13 @@ export function useClients() {
   }
 
   const fetchClients = useCallback(async () => {
-    if (!user?.id) return
+    if (!user?.id) {
+      console.log('⏸️ useClients: No user ID, skipping fetch')
+      return
+    }
 
     try {
+      console.log('📥 useClients: Fetching clients for user:', user.id)
       setLoading(true)
       setError(null)
 
@@ -50,7 +54,10 @@ export function useClients() {
         .eq('trainer_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ useClients: Error from Supabase:', error)
+        throw error
+      }
 
       // Calcular status para cada cliente
       const clientsWithStatus = (data || []).map(client => ({
@@ -58,10 +65,11 @@ export function useClients() {
         status: calculateClientStatus(client.end_date)
       }))
 
+      console.log('✅ useClients: Fetched', clientsWithStatus.length, 'clients')
       setClients(clientsWithStatus)
     } catch (err: any) {
       setError(err.message)
-      console.error('Error fetching clients:', err)
+      console.error('❌ useClients: Error fetching clients:', err)
       setClients([]) // Limpiar en caso de error
     } finally {
       setLoading(false)
@@ -290,9 +298,12 @@ export function useClients() {
 
   useEffect(() => {
     if (user?.id) {
+      console.log('👤 useClients: User ID changed, fetching clients')
       fetchClients()
     } else {
-      clearState()
+      console.log('⚠️ useClients: No user ID - keeping current state')
+      // NO limpiar automáticamente - solo limpiar cuando se llama explícitamente clearState()
+      // Esto evita perder los datos durante re-renders temporales
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])

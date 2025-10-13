@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { Plus, Edit2, Trash2, User, Shield, Key, X } from 'lucide-react'
@@ -13,15 +13,20 @@ interface UserProfile {
   full_name: string
   role: 'trainer' | 'admin' | 'superuser'
   email: string
+  phone?: string
   created_at: string
 }
 
 const userSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
   username: z.string().min(3, 'Mínimo 3 caracteres'),
   full_name: z.string().min(2, 'Mínimo 2 caracteres'),
   role: z.enum(['trainer', 'admin', 'superuser']),
+  phone: z.string()
+    .regex(/^\+[1-9]\d{7,14}$/, 'Formato: +código_país + número (ej: +584123456789)')
+    .optional()
+    .or(z.literal('')),
 })
 
 type UserForm = z.infer<typeof userSchema>
@@ -36,6 +41,7 @@ export default function UserManagement({ onClose }: UserManagementProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const formRef = useRef<HTMLDivElement>(null)
 
   const {
     register,
@@ -50,21 +56,12 @@ export default function UserManagement({ onClose }: UserManagementProps) {
     try {
       setLoading(true)
 
-      // Obtener usuarios con sus perfiles
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+      // Usar la función RPC para obtener usuarios con emails
+      const { data, error } = await supabase.rpc('get_users_with_emails')
 
       if (error) throw error
 
-      // Simplemente usar los datos sin email
-      const usersWithoutEmail = (data || []).map(user => ({
-        ...user,
-        email: 'No disponible' // Placeholder
-      }))
-
-      setUsers(usersWithoutEmail)
+      setUsers(data || [])
     } catch (err: any) {
       setError(err.message)
       console.error('Error fetching users:', err)
@@ -81,7 +78,8 @@ export default function UserManagement({ onClose }: UserManagementProps) {
         user_password: userData.password,
         user_username: userData.username,
         user_full_name: userData.full_name,
-        user_role: userData.role
+        user_role: userData.role,
+        user_phone: userData.phone || null
       })
 
       if (error) {
@@ -107,21 +105,26 @@ export default function UserManagement({ onClose }: UserManagementProps) {
     if (!editingUser) return
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          username: userData.username,
-          full_name: userData.full_name,
-          role: userData.role,
-        })
-        .eq('id', editingUser.id)
+      const { data, error} = await supabase.rpc('update_user_profile', {
+        profile_id: editingUser.id,
+        new_username: userData.username,
+        new_full_name: userData.full_name,
+        new_role: userData.role,
+        new_phone: userData.phone || null,
+        new_password: userData.password || null // Solo se actualiza si se proporciona
+      })
 
       if (error) throw error
+
+      if (!data.success) {
+        throw new Error(`Error actualizando usuario: ${data.error}`)
+      }
 
       await fetchUsers()
       setShowForm(false)
       setEditingUser(null)
       reset()
+      setError('Usuario actualizado exitosamente.')
     } catch (err: any) {
       setError(err.message)
     }
@@ -131,10 +134,18 @@ export default function UserManagement({ onClose }: UserManagementProps) {
     if (!confirm('¿Estás seguro de eliminar este usuario?')) return
 
     try {
-      // Eliminar usuario de auth.users (se eliminará en cascada)
-      const { error } = await supabase.auth.admin.deleteUser(authUserId)
+      // Usar función RPC segura para eliminar usuario
+      const { data, error } = await supabase.rpc('delete_user_safe', {
+        user_auth_id: authUserId
+      })
+
       if (error) throw error
 
+      if (!data.success) {
+        throw new Error(data.error || 'Error eliminando usuario')
+      }
+
+      setError('Usuario eliminado exitosamente.')
       await fetchUsers()
     } catch (err: any) {
       setError(err.message)
@@ -148,9 +159,15 @@ export default function UserManagement({ onClose }: UserManagementProps) {
       username: user.username,
       full_name: user.full_name,
       role: user.role,
+      phone: user.phone || '',
       password: '', // No mostrar password actual
     })
     setShowForm(true)
+
+    // Scroll suave al formulario
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
   }
 
   const onSubmit = async (data: UserForm) => {
@@ -223,6 +240,7 @@ export default function UserManagement({ onClose }: UserManagementProps) {
           {/* Formulario */}
           {showForm && (
             <motion.div
+              ref={formRef}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-6 p-4 bg-dark-200/50 rounded-lg border border-white/10"
@@ -283,6 +301,29 @@ export default function UserManagement({ onClose }: UserManagementProps) {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Teléfono (Opcional)
+                  </label>
+                  <input
+                    {...register('phone')}
+                    type="tel"
+                    placeholder="+584123456789"
+                    onInput={(e) => {
+                      // Asegurar que comience con + y solo contenga números después
+                      let value = e.currentTarget.value
+                      if (!value.startsWith('+')) {
+                        value = '+' + value.replace(/[^0-9]/g, '')
+                      } else {
+                        value = '+' + value.slice(1).replace(/[^0-9]/g, '')
+                      }
+                      e.currentTarget.value = value
+                    }}
+                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white"
+                  />
+                  {errors.phone && <p className="text-red-400 text-sm mt-1">{errors.phone.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Rol
                   </label>
                   <select
@@ -339,6 +380,9 @@ export default function UserManagement({ onClose }: UserManagementProps) {
                     <div>
                       <h4 className="font-medium text-white">{user.full_name}</h4>
                       <p className="text-sm text-slate-400">@{user.username} • {user.email}</p>
+                      {user.phone && (
+                        <p className="text-sm text-slate-500">📱 {user.phone}</p>
+                      )}
                       <span className={`inline-block px-2 py-1 rounded text-xs ${getRoleColor(user.role)}`}>
                         {user.role}
                       </span>

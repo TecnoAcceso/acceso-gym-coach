@@ -42,6 +42,7 @@ export default function ClientFormPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showMedicalCondition, setShowMedicalCondition] = useState(false)
+  const [cedulaError, setCedulaError] = useState('')
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -75,6 +76,38 @@ export default function ClientFormPage() {
   const watchHasPathology = watch('has_pathology')
   const watchHasInjury = watch('has_injury')
   const watchHasAllergies = watch('has_allergies')
+  const watchCedula = watch('cedula')
+  const watchDocumentType = watch('document_type')
+
+  // Validar cédula duplicada en tiempo real
+  const checkDuplicateCedula = (cedula: string, documentType: string) => {
+    if (!cedula || cedula.length < 7) {
+      setCedulaError('')
+      return
+    }
+
+    const existingClient = clients.find(
+      c => c.cedula === cedula.trim() &&
+           c.document_type === documentType &&
+           (!isEditing || c.id !== id)
+    )
+
+    if (existingClient) {
+      setCedulaError(`Ya existe un cliente con cédula ${documentType}-${cedula}`)
+    } else {
+      setCedulaError('')
+    }
+  }
+
+  // Validar cuando cambie la cédula o tipo de documento
+  useEffect(() => {
+    if (watchCedula) {
+      checkDuplicateCedula(watchCedula, watchDocumentType)
+    } else {
+      // Limpiar error si no hay cédula
+      setCedulaError('')
+    }
+  }, [watchCedula, watchDocumentType])
 
   // Calculate end date automatically
   const endDate = React.useMemo(() => {
@@ -106,6 +139,9 @@ export default function ClientFormPage() {
 
   useEffect(() => {
     if (client) {
+      // Limpiar error de cédula al cargar cliente existente
+      setCedulaError('')
+
       setValue('document_type', client.document_type)
       setValue('cedula', client.cedula)
       setValue('full_name', client.full_name)
@@ -137,27 +173,30 @@ export default function ClientFormPage() {
   }, [client, setValue])
 
   const onSubmit = async (data: ClientForm) => {
+    // Verificar error de cédula duplicada antes de procesar
+    if (cedulaError) {
+      showToast(cedulaError, 'error')
+      return
+    }
+
     setIsLoading(true)
     setError('')
 
     try {
-      // Validar cédula duplicada
-      if (!isEditing) {
-        const existingClient = clients.find(
-          c => c.cedula === data.cedula && c.document_type === data.document_type
-        )
-        if (existingClient) {
-          throw new Error(`Ya existe un cliente con cédula ${data.document_type}-${data.cedula}`)
-        }
-      } else if (id) {
-        const existingClient = clients.find(
-          c => c.cedula === data.cedula &&
-               c.document_type === data.document_type &&
-               c.id !== id
-        )
-        if (existingClient) {
-          throw new Error(`Ya existe otro cliente con cédula ${data.document_type}-${data.cedula}`)
-        }
+      // Limpiar espacios de la cédula
+      data.cedula = data.cedula.trim()
+
+      // Validar cédula duplicada (doble verificación)
+      const existingClient = clients.find(
+        c => c.cedula === data.cedula &&
+             c.document_type === data.document_type &&
+             (!isEditing || c.id !== id)
+      )
+
+      if (existingClient) {
+        const errorMsg = `Ya existe un cliente con cédula ${data.document_type}-${data.cedula}`
+        setCedulaError(errorMsg)
+        throw new Error(errorMsg)
       }
 
       // Construir objeto de condición médica si existe algún campo
@@ -233,7 +272,11 @@ export default function ClientFormPage() {
               <div className="flex space-x-2">
                 <select
                   {...register('document_type')}
-                  className="w-20 px-3 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                  className={`w-20 px-3 py-3 bg-dark-200/50 border rounded-lg text-white focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    cedulaError
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                      : 'border-white/10 focus:border-accent-primary focus:ring-accent-primary/20'
+                  }`}
                 >
                   <option value="V">V</option>
                   <option value="E">E</option>
@@ -249,12 +292,25 @@ export default function ClientFormPage() {
                       // Solo permitir números
                       e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '')
                     }}
-                    className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+                    className={`w-full pl-10 pr-4 py-3 bg-dark-200/50 border rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-300 ${
+                      cedulaError
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                        : 'border-white/10 focus:border-accent-primary focus:ring-accent-primary/20'
+                    }`}
                   />
                 </div>
               </div>
               {errors.cedula && (
                 <p className="mt-1 text-sm text-red-400">{errors.cedula.message}</p>
+              )}
+              {cedulaError && !errors.cedula && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-1 text-sm text-red-400 font-medium"
+                >
+                  {cedulaError}
+                </motion.p>
               )}
             </div>
 
@@ -541,7 +597,7 @@ export default function ClientFormPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!cedulaError}
               className="w-full py-3 px-4 bg-gradient-to-r from-accent-primary to-accent-secondary text-white font-medium rounded-lg hover:shadow-lg hover:shadow-accent-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <Save className="w-5 h-5" />
