@@ -1,6 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { ShieldX, Phone, Mail, Users, LogOut } from 'lucide-react'
+import { ShieldX, Phone, Users, LogOut } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface LicenseExpiredProps {
@@ -25,11 +26,8 @@ export default function LicenseExpired({ onContactSupport }: LicenseExpiredProps
     window.open(whatsappUrl, '_blank')
   }
 
-  const handleEmail = () => {
-    const subject = 'Renovación de Licencia - Sistema de Gestión'
-    const body = 'Hola,\n\nNecesito renovar mi licencia para acceder al sistema de gestión de membresías.\n\nPor favor, proporcione información sobre el proceso de renovación.\n\nGracias.'
-    const mailtoUrl = `mailto:tecnoacceso2025@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    window.open(mailtoUrl)
+  const handlePhone = () => {
+    window.location.href = 'tel:04120557690'
   }
 
   return (
@@ -81,19 +79,19 @@ export default function LicenseExpired({ onContactSupport }: LicenseExpiredProps
             onClick={handleWhatsApp}
             className="w-full flex items-center justify-center space-x-3 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            <Phone className="w-5 h-5" />
+            <FaWhatsapp className="w-5 h-5" />
             <span>WhatsApp</span>
           </motion.button>
 
-          {/* Email Button */}
+          {/* Phone Button */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handleEmail}
+            onClick={handlePhone}
             className="w-full flex items-center justify-center space-x-3 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            <Mail className="w-5 h-5" />
-            <span>Email</span>
+            <Phone className="w-5 h-5" />
+            <span>Teléfono</span>
           </motion.button>
 
           {/* Custom Contact Button */}

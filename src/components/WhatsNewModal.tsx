@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sparkles, Shield, Lock, Download, CheckCircle, Smartphone } from 'lucide-react'
+import { X, Sparkles, CheckCircle } from 'lucide-react'
 
-const CURRENT_VERSION = '1.2.0'
+const CURRENT_VERSION = '2.0.0'
 const STORAGE_KEY = 'whats-new-seen-version'
 
 interface WhatsNewModalProps {
@@ -63,7 +63,7 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
 
           {/* Content - Scrollable */}
           <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)] space-y-6">
-            {/* Recuperación de Contraseña */}
+            {/* Sistema de Rutinas */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -72,32 +72,41 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
             >
               <div className="flex items-start space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-5 h-5 text-white" />
+                  <span className="text-xl">🏋️</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">Recuperación de Contraseña</h3>
-                  <p className="text-slate-300 text-sm mb-2">
-                    ¿Olvidaste tu contraseña? Ahora puedes recuperarla fácilmente:
-                  </p>
+                  <h3 className="text-lg font-semibold text-white mb-2">Sistema Completo de Rutinas de Entrenamiento</h3>
                   <ul className="space-y-1 text-sm text-slate-400">
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Botón "¿Olvidaste tu contraseña?" en el login</span>
+                      <span>Creación de rutinas personalizadas con múltiples días de entrenamiento</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Contraseña temporal enviada automáticamente por WhatsApp</span>
+                      <span>Gestor de ejercicios con biblioteca completa (imágenes, descripciones)</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Proceso simple y seguro sin necesidad de contactar soporte</span>
+                      <span>Asignación y seguimiento de rutinas por cliente</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Generación automática de PDF con imágenes de ejercicios</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Envío directo por WhatsApp (PDF y texto formateado)</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Organización por categorías y niveles de dificultad</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </motion.div>
 
-            {/* Cambio de Contraseña */}
+            {/* Planes Nutricionales */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -105,33 +114,42 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">🥗</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">Cambio de Contraseña en Configuración</h3>
-                  <p className="text-slate-300 text-sm mb-2">
-                    Ahora puedes cambiar tu contraseña directamente desde tu perfil:
-                  </p>
+                  <h3 className="text-lg font-semibold text-white mb-2">Gestión Completa de Planes Nutricionales</h3>
                   <ul className="space-y-1 text-sm text-slate-400">
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Accede a Configuración → Cambiar Contraseña</span>
+                      <span>Creación de planes nutricionales detallados por comida</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Verifica tu contraseña actual antes de cambiarla</span>
+                      <span>Cálculo automático de calorías y macronutrientes</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Visualización opcional de contraseñas para mayor comodidad</span>
+                      <span>Múltiples comidas por día (desayuno, almuerzo, merienda, cena)</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Asignación personalizada por cliente</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Exportación a PDF profesional</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Envío automático por WhatsApp</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </motion.div>
 
-            {/* Exportación a Excel */}
+            {/* Sistema de Progreso */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -139,37 +157,38 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Download className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">📊</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">Exportación de Datos a Excel</h3>
-                  <p className="text-slate-300 text-sm mb-2">
-                    Respalda toda tu información de forma completa:
-                  </p>
+                  <h3 className="text-lg font-semibold text-white mb-2">Sistema de Progreso Mejorado</h3>
                   <ul className="space-y-1 text-sm text-slate-400">
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Backup completo de clientes y mediciones en un click</span>
+                      <span>Registro completo de mediciones antropométricas</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Archivo Excel con formato profesional y organizado</span>
+                      <span>Fotos de progreso antes/durante/después</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Incluye información personal, antropométrica y membresías</span>
+                      <span>Comparación visual entre fotos</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Accesible desde Configuración → Respaldo de Datos</span>
+                      <span>Exportación de reportes completos</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Compartir progreso por WhatsApp con imágenes</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </motion.div>
 
-            {/* Mejoras Adicionales */}
+            {/* Fotos de Perfil */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -177,31 +196,121 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">📸</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">Optimizaciones Generales</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Fotos de Perfil de Clientes</h3>
                   <ul className="space-y-1 text-sm text-slate-400">
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Validación de cédulas duplicadas al crear/editar clientes</span>
+                      <span>Subida de fotos de perfil al crear o editar clientes</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Filtro "Por Vencer" optimizado (3 días de antelación)</span>
+                      <span>Visualización de fotos en las tarjetas de clientes</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Manejo mejorado de sesiones (no pierde datos al navegar)</span>
+                      <span>Formatos soportados: JPG, JPEG, PNG (máx. 5MB)</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Notificaciones toast para todas las acciones importantes</span>
+                      <span>Vista previa antes de guardar</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Backup Mejorado */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+              className="glass-card p-4"
+            >
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">💾</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-2">Sistema de Backup Completo</h3>
+                  <ul className="space-y-1 text-sm text-slate-400">
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Exportación completa a Excel con 6 hojas organizadas</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>Mejor rendimiento y velocidad en toda la aplicación</span>
+                      <span>Hoja 1: Información completa de clientes con fotos de perfil</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Hoja 2: Todas las mediciones corporales históricas</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Hoja 3: Rutinas con ejercicios detallados (series, reps, descanso)</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Hoja 4: Planes nutricionales con macros y objetivos</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Hoja 5: Detalle de comidas con alimentos, cantidades y valores nutricionales</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Hoja 6: Fotos de progreso con URLs de descarga</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Horarios en formato 12 horas (AM/PM) para mejor legibilidad</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Mejoras de Interfaz */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+              className="glass-card p-4"
+            >
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-2">Mejoras de Interfaz y Experiencia</h3>
+                  <ul className="space-y-1 text-sm text-slate-400">
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Tarjetas de clientes ahora son clickeables para acceso rápido</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Modal de acciones centralizado con todas las opciones del cliente</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Acciones disponibles: Ver detalles, Editar, Renovar, Asignar rutina/plan, Mediciones, Eliminar</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Botones de acción con iconos y estilos mejorados</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Diálogos de confirmación para acciones críticas</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Inputs de fecha optimizados para dispositivos móviles (iPhone)</span>
                     </li>
                   </ul>
                 </div>
@@ -220,7 +329,7 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               ¡Entendido, empecemos!
             </motion.button>
             <p className="text-xs text-slate-400 text-center mt-3">
-              Desarrollado con 💪 por TecnoAcceso / ElectroShop
+              Desarrollado por TecnoAcceso / ElectroShop
             </p>
           </div>
         </motion.div>

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Client, CreateClientData, UpdateClientData } from '@/types/client'
-import { addMonths, isAfter, isBefore } from 'date-fns'
 
 export function useClients() {
   const { user } = useAuth()
@@ -59,10 +58,35 @@ export function useClients() {
         throw error
       }
 
-      // Calcular status para cada cliente
-      const clientsWithStatus = (data || []).map(client => ({
-        ...client,
-        status: calculateClientStatus(client.end_date)
+      // Calcular status y generar URLs firmadas para fotos de perfil
+      const clientsWithStatus = await Promise.all((data || []).map(async client => {
+        let photoUrl = client.profile_photo_url
+
+        // Si tiene foto y parece ser un path de storage (no una URL firmada completa)
+        if (photoUrl && !photoUrl.includes('token=')) {
+          try {
+            // Extraer el path del archivo
+            const pathMatch = photoUrl.match(/profile-photos\/(.+)$/)
+            if (pathMatch) {
+              const filePath = pathMatch[1]
+              const { data: signedData, error: signedError } = await supabase.storage
+                .from('profile-photos')
+                .createSignedUrl(filePath, 31536000) // 1 año
+
+              if (!signedError && signedData) {
+                photoUrl = signedData.signedUrl
+              }
+            }
+          } catch (err) {
+            console.warn('⚠️ Error generando URL firmada para foto:', err)
+          }
+        }
+
+        return {
+          ...client,
+          profile_photo_url: photoUrl,
+          status: calculateClientStatus(client.end_date)
+        }
       }))
 
       console.log('✅ useClients: Fetched', clientsWithStatus.length, 'clients')

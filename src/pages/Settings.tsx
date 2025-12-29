@@ -156,16 +156,90 @@ export default function Settings() {
       // Obtener todas las mediciones de todos los clientes
       const clientIds = clients.map(c => c.id)
 
-      const { data: measurements, error } = await supabase
+      const { data: measurements, error: measurementsError } = await supabase
         .from('measurements')
         .select('*')
         .in('client_id', clientIds)
         .order('date', { ascending: false })
 
-      if (error) throw error
+      if (measurementsError) throw measurementsError
+
+      // Obtener todas las rutinas asignadas con sus ejercicios
+      const { data: clientRoutines, error: routinesError } = await supabase
+        .from('client_routines')
+        .select(`
+          *,
+          routine_template:routine_templates(
+            name,
+            description,
+            duration_weeks,
+            exercises:routine_exercises(*)
+          )
+        `)
+        .in('client_id', clientIds)
+        .order('assigned_date', { ascending: false })
+
+      if (routinesError) throw routinesError
+
+      // Obtener todos los planes nutricionales asignados con sus comidas
+      const { data: clientNutritionPlans, error: nutritionError } = await supabase
+        .from('client_nutrition_plans')
+        .select(`
+          *,
+          template:nutrition_plan_templates(
+            name,
+            calories,
+            protein_g,
+            carbs_g,
+            fats_g,
+            meals:plan_meals(*)
+          )
+        `)
+        .in('client_id', clientIds)
+        .order('assigned_date', { ascending: false })
+
+      if (nutritionError) throw nutritionError
+
+      // Transformar los datos para el export
+      const routines = (clientRoutines || []).map(cr => ({
+        client_id: cr.client_id,
+        routine_name: cr.routine_template?.name || '',
+        description: cr.routine_template?.description || '',
+        duration_weeks: cr.routine_template?.duration_weeks || 0,
+        exercises: cr.routine_template?.exercises || [],
+        assigned_date: cr.assigned_date,
+        status: cr.status
+      }))
+
+      const nutritionPlans = (clientNutritionPlans || []).map(np => ({
+        client_id: np.client_id,
+        plan_name: np.template?.name || '',
+        target_calories: np.template?.calories || '',
+        target_protein_g: np.template?.protein_g || '',
+        target_carbs_g: np.template?.carbs_g || '',
+        target_fats_g: np.template?.fats_g || '',
+        meals_count: np.template?.meals?.length || 0,
+        meals: np.template?.meals || [], // Incluir todas las comidas para el detalle
+        assigned_date: np.assigned_date,
+        status: np.status
+      }))
+
+      // Obtener todas las fotos de progreso
+      const { data: progressPhotos, error: photosError } = await supabase
+        .from('progress_photos')
+        .select('*')
+        .in('client_id', clientIds)
+        .order('created_at', { ascending: false })
+
+      if (photosError) throw photosError
 
       // Exportar a Excel
-      await exportClientsToExcel(clients, measurements || [])
+      await exportClientsToExcel(clients, {
+        measurements: measurements || [],
+        routines: routines || [],
+        nutritionPlans: nutritionPlans || [],
+        progressPhotos: progressPhotos || []
+      })
 
       showToast('¡Backup exportado exitosamente!', 'success')
     } catch (error: any) {
@@ -207,7 +281,7 @@ export default function Settings() {
             <User className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">Perfil de Usuario</h3>
+            <h3 className="font-semibold text-white">{user?.full_name || 'Usuario'}</h3>
             <p className="text-sm text-slate-400">@{user?.username}</p>
           </div>
         </div>
@@ -455,6 +529,10 @@ export default function Settings() {
               <li>• Condiciones médicas</li>
               <li>• Historial de membresías</li>
               <li>• Todas las mediciones corporales</li>
+              <li>• Rutinas de ejercicios asignadas</li>
+              <li>• Planes nutricionales asignados</li>
+              <li>• Detalle de comidas y alimentos</li>
+              <li>• Fotos de progreso (URLs)</li>
             </ul>
           </div>
 

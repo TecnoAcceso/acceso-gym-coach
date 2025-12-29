@@ -7,6 +7,10 @@ import Dashboard from '@/pages/Dashboard'
 import ClientForm from '@/pages/ClientForm'
 import Settings from '@/pages/Settings'
 import LicenseManagement from '@/pages/LicenseManagement'
+import Routines from '@/pages/Routines'
+import NutritionPlanTemplates from '@/pages/NutritionPlanTemplates'
+import NewNutritionPlan from '@/pages/NewNutritionPlan'
+import ViewNutritionPlan from '@/pages/ViewNutritionPlan'
 import Layout from '@/components/Layout'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import LicenseExpired from '@/components/LicenseExpired'
@@ -73,6 +77,11 @@ function AppRoutes() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients/new" element={<ClientForm />} />
         <Route path="clients/edit/:id" element={<ClientForm />} />
+        <Route path="routines" element={<Routines />} />
+        <Route path="nutrition-plans" element={<NutritionPlanTemplates />} />
+        <Route path="nutrition-plans/new" element={<NewNutritionPlan />} />
+        <Route path="nutrition-plans/:planId" element={<ViewNutritionPlan />} />
+        <Route path="nutrition-plans/:planId/edit" element={<NewNutritionPlan />} />
         <Route path="settings" element={<Settings />} />
         <Route path="license-management" element={<LicenseManagement />} />
       </Route>

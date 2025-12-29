@@ -21,6 +21,7 @@ export interface Client {
   duration_months: number
   end_date: string
   status: 'active' | 'expiring' | 'expired'
+  profile_photo_url?: string
   created_at: string
   updated_at: string
   trainer_id: string
@@ -37,6 +38,7 @@ export interface CreateClientData {
   medical_condition?: MedicalCondition
   start_date: string
   duration_months: number
+  profile_photo_url?: string
 }
 
 export interface UpdateClientData extends Partial<CreateClientData> {
@@ -82,4 +84,17 @@ export interface CreateMeasurementData {
   pantorrilla_der?: number
   pantorrilla_izq?: number
   notas?: string
+}
+
+// FASE 1: Tipos para fotos de progreso
+export type PhotoType = 'frontal' | 'lateral' | 'posterior'
+
+export interface ProgressPhoto {
+  id: string
+  client_id: string
+  measurement_id: string
+  photo_type: PhotoType
+  photo_url: string
+  file_extension?: string
+  created_at: string
 }

@@ -5,8 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useClients } from '@/hooks/useClients'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import Toast, { ToastType } from '@/components/Toast'
-import { ArrowLeft, Save, User, Phone, Calendar, Clock, Weight, Ruler, Cake, Activity, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Save, User, Phone, Clock, Weight, Ruler, Activity, ChevronDown, ChevronUp, X, Image as ImageIcon } from 'lucide-react'
 
 const clientSchema = z.object({
   document_type: z.enum(['V', 'E'], { required_error: 'Selecciona el tipo de documento' }),
@@ -38,11 +40,15 @@ type ClientForm = z.infer<typeof clientSchema>
 export default function ClientFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { user } = useAuth()
   const { clients, createClient, updateClient } = useClients()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showMedicalCondition, setShowMedicalCondition] = useState(false)
   const [cedulaError, setCedulaError] = useState('')
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -169,8 +175,80 @@ export default function ClientFormPage() {
 
       setValue('start_date', client.start_date)
       setValue('duration_months', client.duration_months)
+
+      // Cargar foto de perfil si existe
+      if (client.profile_photo_url) {
+        setPhotoPreview(client.profile_photo_url)
+      }
     }
   }, [client, setValue])
+
+  // Handler para seleccionar archivo de foto
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      showToast('Solo se permiten archivos de imagen', 'error')
+      return
+    }
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('La imagen no puede superar los 5MB', 'error')
+      return
+    }
+
+    setProfilePhoto(file)
+
+    // Crear preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Handler para eliminar foto
+  const handleRemovePhoto = () => {
+    setProfilePhoto(null)
+    setPhotoPreview(null)
+  }
+
+  // Función para subir foto a Supabase Storage
+  const uploadProfilePhoto = async (clientId: string): Promise<string | null> => {
+    if (!profilePhoto || !user) return null
+
+    try {
+      setUploadingPhoto(true)
+
+      // Nombre del archivo: {client_id}/profile.{extension}
+      const fileExt = profilePhoto.name.split('.').pop()
+      const filePath = `${clientId}/profile.${fileExt}`
+
+      // Subir archivo al bucket profile-photos
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, profilePhoto, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      // Generar URL firmada (válida por 1 año)
+      const { data, error: urlError } = await supabase.storage
+        .from('profile-photos')
+        .createSignedUrl(filePath, 31536000) // 1 año en segundos
+
+      if (urlError) throw urlError
+
+      return data.signedUrl
+    } catch (error) {
+      console.error('Error subiendo foto:', error)
+      throw new Error('Error al subir la foto de perfil')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
 
   const onSubmit = async (data: ClientForm) => {
     // Verificar error de cédula duplicada antes de procesar
@@ -210,12 +288,12 @@ export default function ClientFormPage() {
       } : undefined
 
       // Preparar datos del cliente
-      const clientData = {
+      const clientData: any = {
         document_type: data.document_type,
         cedula: data.cedula,
         full_name: data.full_name,
         phone: data.phone,
-        birth_date: data.birth_date,
+        birth_date: data.birth_date || undefined,
         initial_weight: data.initial_weight,
         height: data.height,
         medical_condition: medicalCondition,
@@ -223,11 +301,33 @@ export default function ClientFormPage() {
         duration_months: data.duration_months,
       }
 
+      let savedClient: any
+
       if (isEditing && id) {
-        await updateClient({ id, ...clientData })
+        // Actualizar cliente
+        savedClient = await updateClient({ id, ...clientData })
+
+        // Si hay una nueva foto, subirla y actualizar
+        if (profilePhoto) {
+          const photoUrl = await uploadProfilePhoto(id)
+          if (photoUrl) {
+            await updateClient({ id, profile_photo_url: photoUrl })
+          }
+        }
+
         showToast('¡Cliente actualizado exitosamente!', 'success')
       } else {
-        await createClient(clientData)
+        // Crear cliente primero
+        savedClient = await createClient(clientData)
+
+        // Si hay foto, subirla y actualizar el cliente
+        if (profilePhoto && savedClient?.id) {
+          const photoUrl = await uploadProfilePhoto(savedClient.id)
+          if (photoUrl) {
+            await updateClient({ id: savedClient.id, profile_photo_url: photoUrl })
+          }
+        }
+
         showToast('¡Cliente registrado exitosamente!', 'success')
       }
 
@@ -367,20 +467,59 @@ export default function ClientFormPage() {
               )}
             </div>
 
-            {/* Birth Date */}
+            {/* Profile Photo */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
+                Foto de Perfil (Opcional)
+              </label>
+
+              {photoPreview ? (
+                <div className="relative">
+                  <div className="w-full aspect-square max-w-xs mx-auto rounded-xl overflow-hidden border-2 border-accent-primary/30 bg-dark-200/30">
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 rounded-full text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+              ) : (
+                <label className="block w-full cursor-pointer">
+                  <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/20 rounded-xl bg-dark-200/30 hover:bg-dark-200/50 hover:border-accent-primary/50 transition-all">
+                    <ImageIcon className="w-12 h-12 text-slate-400 mb-3" />
+                    <p className="text-sm text-slate-400 mb-1">Haz clic para seleccionar</p>
+                    <p className="text-xs text-slate-500">JPG, PNG (máx. 5MB)</p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Birth Date */}
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Fecha de Nacimiento (Opcional)
               </label>
-              <div className="relative">
-                <Cake className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  {...register('birth_date')}
-                  type="date"
-                  max={new Date().toISOString().split('T')[0]}
-                  className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
-                />
-              </div>
+              <input
+                {...register('birth_date')}
+                type="date"
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full px-2 py-2 text-xs bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+              />
               {errors.birth_date && (
                 <p className="mt-1 text-sm text-red-400">{errors.birth_date.message}</p>
               )}
@@ -534,18 +673,15 @@ export default function ClientFormPage() {
 
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Fecha de Inicio
               </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  {...register('start_date')}
-                  type="date"
-                  min={isEditing ? undefined : new Date().toISOString().split('T')[0]}
-                  className="w-full pl-10 pr-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
-                />
-              </div>
+              <input
+                {...register('start_date')}
+                type="date"
+                min={isEditing ? undefined : new Date().toISOString().split('T')[0]}
+                className="w-full px-2 py-2 text-xs bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all duration-300"
+              />
               {errors.start_date && (
                 <p className="mt-1 text-sm text-red-400">{errors.start_date.message}</p>
               )}
@@ -597,11 +733,13 @@ export default function ClientFormPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={isLoading || !!cedulaError}
+              disabled={isLoading || uploadingPhoto || !!cedulaError}
               className="w-full py-3 px-4 bg-gradient-to-r from-accent-primary to-accent-secondary text-white font-medium rounded-lg hover:shadow-lg hover:shadow-accent-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <Save className="w-5 h-5" />
-              <span>{isLoading ? 'Guardando...' : 'Guardar Cliente'}</span>
+              <span>
+                {uploadingPhoto ? 'Subiendo foto...' : isLoading ? 'Guardando...' : 'Guardar Cliente'}
+              </span>
             </motion.button>
           </form>
         </div>

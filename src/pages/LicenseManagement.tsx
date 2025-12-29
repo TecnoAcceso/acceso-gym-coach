@@ -14,18 +14,15 @@ import {
   ShieldX,
   Key,
   Calendar,
-  Clock,
-  Settings,
   User,
   AlertTriangle,
-  CheckCircle,
   Users,
   XCircle,
   Edit,
   Trash2,
-  RefreshCw,
-  MessageCircle
+  RefreshCw
 } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { format, addDays, addMonths, addYears } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -409,8 +406,7 @@ export default function LicenseManagement() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white">Usuarios  Licencias</h1>
-            <p className="text-sm text-slate-400">Panel de administración</p>
+            <h1 className="text-2xl font-bold text-white">Usuarios y Licencias</h1>
           </div>
         </div>
 
@@ -447,7 +443,7 @@ export default function LicenseManagement() {
       </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -774,7 +770,7 @@ export default function LicenseManagement() {
                         }`}
                         title={`Enviar recordatorio por WhatsApp a ${license.user_profile?.phone}`}
                       >
-                        <MessageCircle className="w-4 h-4" />
+                        <FaWhatsapp className="w-4 h-4" />
                       </motion.button>
                     )}
 

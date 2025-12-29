@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
-import { Plus, Edit2, Trash2, User, Shield, Key, X } from 'lucide-react'
+import { Plus, Edit, Trash2, User, Shield, Key, X } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -337,25 +337,29 @@ export default function UserManagement({ onClose }: UserManagementProps) {
                   {errors.role && <p className="text-red-400 text-sm mt-1">{errors.role.message}</p>}
                 </div>
 
-                <div className="md:col-span-2 flex space-x-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/80 transition-colors disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Guardando...' : editingUser ? 'Actualizar' : 'Crear'}
-                  </button>
-                  <button
+                <div className="md:col-span-2 flex space-x-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     onClick={() => {
                       setShowForm(false)
                       setEditingUser(null)
                       reset()
                     }}
-                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors"
+                    className="flex-1 py-3 px-4 bg-dark-200/50 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-dark-200/70 transition-all duration-300"
                   >
                     Cancelar
-                  </button>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-accent-primary to-accent-secondary text-white font-medium rounded-lg hover:shadow-lg hover:shadow-accent-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Guardando...' : editingUser ? 'Actualizar Usuario' : 'Crear Usuario'}
+                  </motion.button>
                 </div>
               </form>
             </motion.div>
@@ -390,18 +394,24 @@ export default function UserManagement({ onClose }: UserManagementProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleEdit(user)}
-                      className="p-2 text-slate-400 hover:text-accent-primary transition-colors"
+                      className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all duration-200"
+                      title="Editar usuario"
                     >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
+                      <Edit className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => deleteUser(user.id, user.auth_user_id)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                      className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all duration-200"
+                      title="Eliminar usuario"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </motion.button>
                   </div>
                 </motion.div>
               ))}

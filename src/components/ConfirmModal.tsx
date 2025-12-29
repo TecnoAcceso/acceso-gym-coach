@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X } from 'lucide-react'
 
@@ -60,7 +59,7 @@ export default function ConfirmModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[110]"
           />
 
           {/* Modal */}
@@ -69,7 +68,7 @@ export default function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none"
+            className="fixed inset-0 flex items-center justify-center p-4 z-[110] pointer-events-none"
           >
             <div className="bg-dark-300 rounded-xl border border-white/10 w-full max-w-md pointer-events-auto shadow-2xl">
               {/* Header */}
