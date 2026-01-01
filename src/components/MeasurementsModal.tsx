@@ -81,6 +81,12 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
   const [photoPreview, setPhotoPreview] = useState<{ [key: string]: string }>({})
   const [currentMeasurementPhotos, setCurrentMeasurementPhotos] = useState<any[]>([])
 
+  // Estado para modal de detalles del historial
+  const [detailsModal, setDetailsModal] = useState<{
+    isOpen: boolean
+    measurement: MeasurementRecord | null
+  }>({ isOpen: false, measurement: null })
+
   // Estados para diálogo de confirmación
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -332,8 +338,8 @@ _Powered by TecnoAcceso / ElectroShop_`
     }
 
     // Validar tipo
-    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-      alert('Solo se permiten imágenes JPG o PNG')
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Solo se permiten imágenes JPG, PNG o WEBP')
       return
     }
 
@@ -757,29 +763,44 @@ _Powered by TecnoAcceso / ElectroShop_`
                       No hay medidas registradas aún
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {measurements.map((measurement) => (
                         <motion.div
                           key={measurement.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="glass-card p-4 border border-white/10"
+                          className="glass-card p-3 border border-white/10 hover:border-accent-primary/30 transition-all"
                         >
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center space-x-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 flex-1">
                               <Calendar className="w-4 h-4 text-accent-primary" />
-                              <span className="text-sm font-medium text-white">
-                                {formatDate(measurement.date)}
-                              </span>
+                              <div>
+                                <p className="text-sm font-medium text-white">
+                                  {formatDate(measurement.date)}
+                                </p>
+                                {measurement.objetivo && (
+                                  <p className="text-xs text-slate-400 truncate max-w-[200px]">
+                                    {measurement.objetivo}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex space-x-1">
+                            <div className="flex items-center space-x-2">
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setDetailsModal({ isOpen: true, measurement })}
+                                className="px-3 py-1.5 bg-accent-primary/20 text-accent-primary text-xs font-medium rounded-lg hover:bg-accent-primary/30 transition-all"
+                              >
+                                Ver detalles
+                              </motion.button>
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => handleEdit(measurement)}
-                                className="p-1.5 rounded bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30"
+                                className="p-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
                               >
-                                <Edit className="w-3 h-3" />
+                                <Edit className="w-3.5 h-3.5" />
                               </motion.button>
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
@@ -787,100 +808,10 @@ _Powered by TecnoAcceso / ElectroShop_`
                                 onClick={() => handleDelete(measurement.id)}
                                 className="p-1.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </motion.button>
                             </div>
                           </div>
-
-                          {measurement.objetivo && (
-                            <div className="mb-2 flex items-start space-x-2">
-                              <Target className="w-4 h-4 text-slate-400 mt-0.5" />
-                              <span className="text-sm text-slate-300">{measurement.objetivo}</span>
-                            </div>
-                          )}
-
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                            {measurement.peso && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Peso:</span>
-                                <span className="text-white font-medium">{measurement.peso} kg</span>
-                              </div>
-                            )}
-                            {measurement.hombros && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Hombros:</span>
-                                <span className="text-white font-medium">{measurement.hombros} cm</span>
-                              </div>
-                            )}
-                            {measurement.pecho && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Pecho:</span>
-                                <span className="text-white font-medium">{measurement.pecho} cm</span>
-                              </div>
-                            )}
-                            {measurement.espalda && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Espalda:</span>
-                                <span className="text-white font-medium">{measurement.espalda} cm</span>
-                              </div>
-                            )}
-                            {measurement.biceps_der && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Bíceps Der:</span>
-                                <span className="text-white font-medium">{measurement.biceps_der} cm</span>
-                              </div>
-                            )}
-                            {measurement.biceps_izq && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Bíceps Izq:</span>
-                                <span className="text-white font-medium">{measurement.biceps_izq} cm</span>
-                              </div>
-                            )}
-                            {measurement.cintura && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Cintura:</span>
-                                <span className="text-white font-medium">{measurement.cintura} cm</span>
-                              </div>
-                            )}
-                            {measurement.gluteo && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Glúteo:</span>
-                                <span className="text-white font-medium">{measurement.gluteo} cm</span>
-                              </div>
-                            )}
-                            {measurement.pierna_der && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Pierna Der:</span>
-                                <span className="text-white font-medium">{measurement.pierna_der} cm</span>
-                              </div>
-                            )}
-                            {measurement.pierna_izq && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Pierna Izq:</span>
-                                <span className="text-white font-medium">{measurement.pierna_izq} cm</span>
-                              </div>
-                            )}
-                            {measurement.pantorrilla_der && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Pantorrilla Der:</span>
-                                <span className="text-white font-medium">{measurement.pantorrilla_der} cm</span>
-                              </div>
-                            )}
-                            {measurement.pantorrilla_izq && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Pantorrilla Izq:</span>
-                                <span className="text-white font-medium">{measurement.pantorrilla_izq} cm</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {measurement.notas && (
-                            <div className="mt-3 pt-3 border-t border-white/10">
-                              <p className="text-xs text-slate-400">
-                                <strong>Notas:</strong> {measurement.notas}
-                              </p>
-                            </div>
-                          )}
                         </motion.div>
                       ))}
                     </div>
@@ -932,11 +863,16 @@ _Powered by TecnoAcceso / ElectroShop_`
                             className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
                           >
                             <option value="">Seleccionar...</option>
-                            {measurements.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {formatDate(m.date)}
-                              </option>
-                            ))}
+                            {measurements.map((m) => {
+                              // Si hay fecha final seleccionada, solo mostrar fechas anteriores o iguales
+                              const endDate = selectedEndId ? measurements.find(ms => ms.id === selectedEndId)?.date : null
+                              const isDisabled = !!(endDate && m.date > endDate)
+                              return (
+                                <option key={m.id} value={m.id} disabled={isDisabled}>
+                                  {formatDate(m.date)}
+                                </option>
+                              )
+                            })}
                           </select>
                         </div>
 
@@ -950,11 +886,16 @@ _Powered by TecnoAcceso / ElectroShop_`
                             className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
                           >
                             <option value="">Seleccionar...</option>
-                            {measurements.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {formatDate(m.date)}
-                              </option>
-                            ))}
+                            {measurements.map((m) => {
+                              // Si hay fecha inicial seleccionada, solo mostrar fechas posteriores o iguales
+                              const startDate = selectedStartId ? measurements.find(ms => ms.id === selectedStartId)?.date : null
+                              const isDisabled = !!(startDate && m.date < startDate)
+                              return (
+                                <option key={m.id} value={m.id} disabled={isDisabled}>
+                                  {formatDate(m.date)}
+                                </option>
+                              )
+                            })}
                           </select>
                         </div>
                       </div>
@@ -1121,7 +1062,7 @@ _Powered by TecnoAcceso / ElectroShop_`
                       {...register('date')}
                       type="date"
                       max={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
+                      className="max-w-[280px] w-full px-3 py-3 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 text-sm"
                     />
                     {errors.date && (
                       <p className="mt-1 text-sm text-red-400">{errors.date.message}</p>
@@ -1368,7 +1309,7 @@ _Powered by TecnoAcceso / ElectroShop_`
                               <label className="block w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-accent-primary/50 hover:bg-accent-primary/5 transition-all">
                                 <input
                                   type="file"
-                                  accept="image/jpeg,image/jpg,image/png"
+                                  accept="image/jpeg,image/jpg,image/png,image/webp"
                                   className="hidden"
                                   onChange={(e) => {
                                     const file = e.target.files?.[0]
@@ -1584,6 +1525,141 @@ _Powered by TecnoAcceso / ElectroShop_`
               </div>
             </div>
           </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Detalles */}
+      <AnimatePresence>
+        {detailsModal.isOpen && detailsModal.measurement && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={() => setDetailsModal({ isOpen: false, measurement: null })}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="glass-card p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto border border-white/10 shadow-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-5 h-5 text-accent-primary" />
+                    <h3 className="text-lg font-semibold text-white">
+                      {formatDate(detailsModal.measurement.date)}
+                    </h3>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setDetailsModal({ isOpen: false, measurement: null })}
+                    className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+
+                {detailsModal.measurement.objetivo && (
+                  <div className="mb-4 p-3 bg-accent-primary/10 border border-accent-primary/20 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <Target className="w-4 h-4 text-accent-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-slate-400">Objetivo</p>
+                        <p className="text-sm text-white">{detailsModal.measurement.objetivo}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  {detailsModal.measurement.peso && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Peso</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.peso} kg</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.hombros && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Hombros</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.hombros} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.pecho && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Pecho</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.pecho} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.espalda && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Espalda</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.espalda} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.biceps_der && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Bíceps Der</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.biceps_der} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.biceps_izq && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Bíceps Izq</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.biceps_izq} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.cintura && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Cintura</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.cintura} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.gluteo && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Glúteo</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.gluteo} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.pierna_der && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Pierna Der</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.pierna_der} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.pierna_izq && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Pierna Izq</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.pierna_izq} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.pantorrilla_der && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Pantorrilla Der</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.pantorrilla_der} cm</p>
+                    </div>
+                  )}
+                  {detailsModal.measurement.pantorrilla_izq && (
+                    <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
+                      <p className="text-xs text-slate-400 mb-1">Pantorrilla Izq</p>
+                      <p className="text-lg font-semibold text-white">{detailsModal.measurement.pantorrilla_izq} cm</p>
+                    </div>
+                  )}
+                </div>
+
+                {detailsModal.measurement.notas && (
+                  <div className="mt-4 p-3 bg-dark-200/30 rounded-lg border border-white/10">
+                    <p className="text-xs text-slate-400 mb-1">Notas</p>
+                    <p className="text-sm text-white">{detailsModal.measurement.notas}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
