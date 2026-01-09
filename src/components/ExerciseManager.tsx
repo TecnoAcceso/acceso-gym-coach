@@ -5,6 +5,7 @@ import { GiWeightLiftingUp } from 'react-icons/gi'
 import { MdAddCircleOutline } from 'react-icons/md'
 import { useRoutines } from '@/hooks/useRoutines'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import PhotoPickerModal from '@/components/PhotoPickerModal'
 import type { RoutineExercise, RoutineDay } from '@/types/routine'
 
 interface ExerciseManagerProps {
@@ -43,6 +44,7 @@ export default function ExerciseManager({ isOpen, onClose, routineId, routineNam
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
     exercise: RoutineExercise | null
@@ -141,6 +143,15 @@ export default function ExerciseManager({ isOpen, onClose, routineId, routineNam
       setPhotoFile(file)
       setPhotoPreview(URL.createObjectURL(file))
     }
+  }
+
+  const handlePhotoFromModal = (file: File) => {
+    if (file.size > 3 * 1024 * 1024) {
+      alert('La foto debe ser menor a 3MB')
+      return
+    }
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
   }
 
   const handleRemovePhoto = () => {
@@ -474,16 +485,13 @@ export default function ExerciseManager({ isOpen, onClose, routineId, routineNam
                           </button>
                         </div>
                       ) : (
-                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-lg cursor-pointer hover:border-accent-primary/50 transition-colors">
+                        <div
+                          onClick={() => setPhotoPickerOpen(true)}
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-lg cursor-pointer hover:border-accent-primary/50 transition-colors"
+                        >
                           <Camera className="w-8 h-8 text-slate-400 mb-2" />
                           <span className="text-sm text-slate-400">Click para agregar foto</span>
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/jpg"
-                            onChange={handlePhotoChange}
-                            className="hidden"
-                          />
-                        </label>
+                        </div>
                       )}
                     </div>
 
@@ -629,6 +637,14 @@ export default function ExerciseManager({ isOpen, onClose, routineId, routineNam
             loadingText="Eliminando..."
             onConfirm={confirmDeleteExercise}
             onCancel={() => setConfirmDialog({ isOpen: false, exercise: null })}
+          />
+
+          {/* Photo Picker Modal */}
+          <PhotoPickerModal
+            isOpen={photoPickerOpen}
+            onClose={() => setPhotoPickerOpen(false)}
+            onPhotoSelect={handlePhotoFromModal}
+            title="Foto del ejercicio"
           />
         </>
       )}

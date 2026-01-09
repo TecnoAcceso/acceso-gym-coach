@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sparkles, CheckCircle } from 'lucide-react'
 
-const CURRENT_VERSION = '2.0.0'
+const CURRENT_VERSION = '2.0.1'
 const STORAGE_KEY = 'whats-new-seen-version'
 
 interface WhatsNewModalProps {
@@ -63,6 +63,56 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
 
           {/* Content - Scrollable */}
           <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)] space-y-6">
+            {/* NUEVO EN v2.0.1 */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.05 }}
+              className="glass-card p-4 border-2 border-accent-primary/50"
+            >
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">✨</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
+                    Mejoras v2.0.1
+                    <span className="ml-2 text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">NUEVO</span>
+                  </h3>
+                  <ul className="space-y-1 text-sm text-slate-400">
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span><strong>Modal de Selección de Foto:</strong> Ahora al agregar fotos aparece un modal con 2 opciones: "Tomar foto" (abre cámara) o "Abrir galería" (selecciona imagen). Funciona igual en Android y iPhone</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span><strong>Fotos en Detalles de Medidas:</strong> El modal "Ver detalles" en el historial de medidas ahora muestra las fotos de progreso (frontal, lateral, trasera) si fueron agregadas</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span><strong>Comparación de Medidas Mejorada:</strong> Nuevo flujo de descarga de PDF con 2 botones separados:</span>
+                    </li>
+                    <li className="ml-6 flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>Botón "Descargar PDF" (azul) con estados: Generando → Descargando → Completado</span>
+                    </li>
+                    <li className="ml-6 flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>Botón "Enviar por WhatsApp" (verde) solo se activa después de descargar el PDF</span>
+                    </li>
+                    <li className="ml-6 flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>Mensaje mejorado para el cliente sin referencias técnicas</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                      <span><strong>Optimizaciones móviles:</strong> Mejor experiencia en iPhone y Android con validación de formatos de imagen (JPG, PNG, WEBP)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+
             {/* Sistema de Rutinas */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}

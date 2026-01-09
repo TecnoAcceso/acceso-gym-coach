@@ -29,6 +29,7 @@ import { TbRulerMeasure2 } from 'react-icons/tb'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import ConfirmDialog from './ConfirmDialog'
+import PhotoPickerModal from './PhotoPickerModal'
 
 interface MeasurementsModalProps {
   isOpen: boolean
@@ -67,6 +68,8 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
   const [editingMeasurement, setEditingMeasurement] = useState<MeasurementRecord | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+  const [pdfGenerationStatus, setPdfGenerationStatus] = useState<string>('')
+  const [pdfDownloaded, setPdfDownloaded] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
 
   // FASE 1: Estados para comparación
@@ -86,6 +89,7 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
     isOpen: boolean
     measurement: MeasurementRecord | null
   }>({ isOpen: false, measurement: null })
+  const [detailsPhotos, setDetailsPhotos] = useState<any[]>([])
 
   // Estados para diálogo de confirmación
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -98,6 +102,15 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
     title: '',
     message: '',
     onConfirm: () => {}
+  })
+
+  // Estado para modal de selección de foto
+  const [photoPickerModal, setPhotoPickerModal] = useState<{
+    isOpen: boolean
+    type: 'frontal' | 'lateral' | 'trasera' | null
+  }>({
+    isOpen: false,
+    type: null
   })
 
   const { user } = useAuth()
@@ -121,8 +134,14 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
       setActiveTab('history')
       setSelectedStartId('')
       setSelectedEndId('')
+      setPdfDownloaded(false)
     }
   }, [isOpen])
+
+  // Resetear estado de PDF cuando cambian los períodos
+  useEffect(() => {
+    setPdfDownloaded(false)
+  }, [selectedStartId, selectedEndId])
 
   // FASE 1: Cargar fotos cuando cambian los selectores
   useEffect(() => {
@@ -166,6 +185,25 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
     loadEditPhotos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingMeasurement?.id])
+
+  // Cargar fotos para el modal de detalles
+  useEffect(() => {
+    const loadDetailsPhotos = async () => {
+      if (detailsModal.isOpen && detailsModal.measurement) {
+        try {
+          const photos = await fetchPhotos(detailsModal.measurement.id)
+          setDetailsPhotos(photos)
+        } catch (error) {
+          console.error('Error loading details photos:', error)
+          setDetailsPhotos([])
+        }
+      } else {
+        setDetailsPhotos([])
+      }
+    }
+    loadDetailsPhotos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailsModal.isOpen, detailsModal.measurement?.id])
 
   if (!client) return null
 
@@ -609,30 +647,61 @@ _Powered by TecnoAcceso / ElectroShop_`
     }
   }
 
-  // FASE 1: Enviar PDF por WhatsApp
-  const handleSendWhatsAppPDF = async () => {
+  // FASE 1: Descargar PDF de comparación
+  const handleDownloadPDF = async () => {
     if (!selectedStartId || !selectedEndId || !client) return
 
     try {
-      // Generar PDF
+      // Paso 1: Generando PDF
+      setPdfGenerationStatus('Generando PDF...')
+      await new Promise(resolve => setTimeout(resolve, 800))
+
       const pdf = await generateComparisonPDF()
-      if (!pdf) return
+      if (!pdf) {
+        setPdfGenerationStatus('')
+        return
+      }
 
-      // Crear mensaje de WhatsApp
-      const startM = measurements.find(m => m.id === selectedStartId)
-      const endM = measurements.find(m => m.id === selectedEndId)
+      // Paso 2: Descargando PDF
+      setPdfGenerationStatus('Descargando PDF...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      const message = `¡Hola! 👋\n\nTe comparto tu reporte de avances:\n📅 Del ${formatDate(startM!.date)} al ${formatDate(endM!.date)}\n\n¡Sigue así! 💪`
-
-      const encodedMessage = encodeURIComponent(message)
-      const phoneNumber = client.phone.replace(/\D/g, '')
-      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
-
-      window.open(whatsappUrl, '_blank')
+      setPdfGenerationStatus('')
+      setPdfDownloaded(true)
     } catch (error) {
       console.error('Error:', error)
-      alert('Error al procesar el PDF')
+      alert('Error al generar el PDF')
+      setPdfGenerationStatus('')
     }
+  }
+
+  // FASE 1: Enviar mensaje por WhatsApp (después de descargar PDF)
+  const handleSendWhatsApp = () => {
+    if (!selectedStartId || !selectedEndId || !client) return
+
+    const startM = measurements.find(m => m.id === selectedStartId)
+    const endM = measurements.find(m => m.id === selectedEndId)
+    const trainerName = user?.full_name || 'Tu entrenador'
+
+    const message = `¡Hola ${client.full_name}! 👋
+
+Revisa el reporte de tus avances del ${formatDate(startM!.date)} al ${formatDate(endM!.date)} 📊
+
+¡Estás haciendo un trabajo increíble! 💪
+Sigue así y alcanzarás todas tus metas.
+
+Si tienes dudas, aquí estoy para ayudarte.
+
+Saludos! 🏋️
+${trainerName}
+
+_Powered by TecnoAcceso / ElectroShop_`
+
+    const encodedMessage = encodeURIComponent(message)
+    const phoneNumber = client.phone.replace(/\D/g, '')
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
+
+    window.open(whatsappUrl, '_blank')
   }
 
   const formatDate = (dateString: string) => {
@@ -1032,16 +1101,48 @@ _Powered by TecnoAcceso / ElectroShop_`
                             )}
                           </div>
 
-                          {/* Botón Enviar PDF por WhatsApp */}
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={handleSendWhatsAppPDF}
-                            className="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center space-x-3"
-                          >
-                            <FaWhatsapp className="w-6 h-6" />
-                            <span className="text-lg">Enviar PDF por WhatsApp</span>
-                          </motion.button>
+                          {/* Botones de acción */}
+                          <div className="space-y-3">
+                            {/* Botón 1: Descargar PDF */}
+                            <motion.button
+                              whileHover={{ scale: pdfGenerationStatus ? 1 : 1.02 }}
+                              whileTap={{ scale: pdfGenerationStatus ? 1 : 0.98 }}
+                              onClick={handleDownloadPDF}
+                              disabled={!!pdfGenerationStatus || pdfDownloaded}
+                              className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                              {pdfGenerationStatus ? (
+                                <>
+                                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span className="text-lg">{pdfGenerationStatus}</span>
+                                </>
+                              ) : pdfDownloaded ? (
+                                <>
+                                  <Download className="w-6 h-6" />
+                                  <span className="text-lg">✓ PDF Descargado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-6 h-6" />
+                                  <span className="text-lg">Descargar PDF</span>
+                                </>
+                              )}
+                            </motion.button>
+
+                            {/* Botón 2: Enviar por WhatsApp (solo se activa después de descargar) */}
+                            <motion.button
+                              whileHover={{ scale: pdfDownloaded ? 1.02 : 1 }}
+                              whileTap={{ scale: pdfDownloaded ? 0.98 : 1 }}
+                              onClick={handleSendWhatsApp}
+                              disabled={!pdfDownloaded}
+                              className="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <FaWhatsapp className="w-6 h-6" />
+                              <span className="text-lg">
+                                {pdfDownloaded ? 'Enviar por WhatsApp' : 'Descarga el PDF primero'}
+                              </span>
+                            </motion.button>
+                          </div>
                         </>
                       ) : (
                         <div className="text-center py-12 text-slate-400">
@@ -1261,7 +1362,7 @@ _Powered by TecnoAcceso / ElectroShop_`
                       Fotos de Progreso (Opcional)
                     </label>
                     <div className="grid grid-cols-3 gap-3">
-                      {['frontal', 'lateral', 'posterior'].map((type) => {
+                      {(['frontal', 'lateral', 'trasera'] as const).map((type) => {
                         const existingPhoto = currentMeasurementPhotos.find(p => p.photo_type === type)
                         const pendingPreview = photoPreview[type]
 
@@ -1305,20 +1406,14 @@ _Powered by TecnoAcceso / ElectroShop_`
                                 </div>
                               </div>
                             ) : (
-                              // Sin foto - mostrar botón de subida
-                              <label className="block w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-accent-primary/50 hover:bg-accent-primary/5 transition-all">
-                                <input
-                                  type="file"
-                                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0]
-                                    if (file) handleFormPhotoSelect(type, file)
-                                  }}
-                                />
+                              // Sin foto - mostrar botón que abre modal
+                              <div
+                                onClick={() => setPhotoPickerModal({ isOpen: true, type })}
+                                className="block w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-accent-primary/50 hover:bg-accent-primary/5 transition-all"
+                              >
                                 <Camera className="w-6 h-6 text-slate-500 mb-1" />
                                 <span className="text-xs text-slate-500">Subir</span>
-                              </label>
+                              </div>
                             )}
                           </div>
                         )
@@ -1577,6 +1672,30 @@ _Powered by TecnoAcceso / ElectroShop_`
                   </div>
                 )}
 
+                {/* Fotos de progreso */}
+                {detailsPhotos.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center space-x-2">
+                      <Camera className="w-4 h-4 text-accent-primary" />
+                      <span>Fotos de Progreso</span>
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {detailsPhotos.map((photo) => (
+                        <div key={photo.id} className="space-y-1">
+                          <div className="aspect-square rounded-lg overflow-hidden border border-white/10">
+                            <img
+                              src={photo.photo_url}
+                              alt={photo.photo_type}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <p className="text-xs text-slate-400 text-center capitalize">{photo.photo_type}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   {detailsModal.measurement.peso && (
                     <div className="bg-dark-200/50 p-3 rounded-lg border border-white/10">
@@ -1674,6 +1793,18 @@ _Powered by TecnoAcceso / ElectroShop_`
         type="danger"
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+      />
+
+      {/* Modal de selección de foto */}
+      <PhotoPickerModal
+        isOpen={photoPickerModal.isOpen}
+        onClose={() => setPhotoPickerModal({ isOpen: false, type: null })}
+        onPhotoSelect={(file) => {
+          if (photoPickerModal.type) {
+            handleFormPhotoSelect(photoPickerModal.type, file)
+          }
+        }}
+        title="Agregar foto"
       />
     </>
   )

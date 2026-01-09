@@ -8,6 +8,7 @@ import { useClients } from '@/hooks/useClients'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import Toast, { ToastType } from '@/components/Toast'
+import PhotoPickerModal from '@/components/PhotoPickerModal'
 import { ArrowLeft, Save, User, Phone, Clock, Weight, Ruler, Activity, ChevronDown, ChevronUp, X, Image as ImageIcon } from 'lucide-react'
 
 const clientSchema = z.object({
@@ -49,6 +50,7 @@ export default function ClientFormPage() {
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -188,6 +190,30 @@ export default function ClientFormPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      showToast('Solo se permiten archivos de imagen', 'error')
+      return
+    }
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('La imagen no puede superar los 5MB', 'error')
+      return
+    }
+
+    setProfilePhoto(file)
+
+    // Crear preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Handler para foto desde modal
+  const handlePhotoFromModal = (file: File) => {
     // Validar tipo de archivo
     if (!file.type.startsWith('image/')) {
       showToast('Solo se permiten archivos de imagen', 'error')
@@ -493,19 +519,16 @@ export default function ClientFormPage() {
                   </motion.button>
                 </div>
               ) : (
-                <label className="block w-full cursor-pointer">
+                <div
+                  onClick={() => setPhotoPickerOpen(true)}
+                  className="block w-full cursor-pointer"
+                >
                   <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/20 rounded-xl bg-dark-200/30 hover:bg-dark-200/50 hover:border-accent-primary/50 transition-all">
                     <ImageIcon className="w-12 h-12 text-slate-400 mb-3" />
                     <p className="text-sm text-slate-400 mb-1">Haz clic para seleccionar</p>
                     <p className="text-xs text-slate-500">JPG, PNG (máx. 5MB)</p>
                   </div>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handlePhotoSelect}
-                    className="hidden"
-                  />
-                </label>
+                </div>
               )}
             </div>
 
@@ -751,6 +774,14 @@ export default function ClientFormPage() {
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
+      />
+
+      {/* Photo Picker Modal */}
+      <PhotoPickerModal
+        isOpen={photoPickerOpen}
+        onClose={() => setPhotoPickerOpen(false)}
+        onPhotoSelect={handlePhotoFromModal}
+        title="Foto de perfil"
       />
     </div>
   )
