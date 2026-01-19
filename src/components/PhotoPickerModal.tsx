@@ -35,7 +35,7 @@ export default function PhotoPickerModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110]"
             onClick={onClose}
           />
 
@@ -44,7 +44,7 @@ export default function PhotoPickerModal({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="glass-card p-6 w-full max-w-sm border border-white/10 shadow-2xl">
