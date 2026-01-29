@@ -1,8 +1,8 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { Client } from '@/types/client'
-import { User, Phone, Calendar, Clock, UtensilsCrossed } from 'lucide-react'
+import { User, Phone, CheckCircle2, AlertCircle, XCircle, ArrowRight } from 'lucide-react'
 import { GiWeightLiftingUp } from 'react-icons/gi'
+import { UtensilsCrossed } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -15,22 +15,31 @@ interface ClientCardProps {
 
 const statusConfig = {
   active: {
-    color: 'text-status-active',
-    bg: 'bg-status-active/10',
-    border: 'border-status-active/20',
-    label: 'Activo'
+    icon: CheckCircle2,
+    label: 'Activo',
+    chipBg: 'bg-emerald-500/20',
+    chipText: 'text-emerald-400',
+    chipBorder: 'border-emerald-500/30',
+    glowColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: 'border-l-emerald-500',
   },
   expiring: {
-    color: 'text-status-warning',
-    bg: 'bg-status-warning/10',
-    border: 'border-status-warning/20',
-    label: 'Por Vencer'
+    icon: AlertCircle,
+    label: 'Por Vencer',
+    chipBg: 'bg-amber-500/20',
+    chipText: 'text-amber-400',
+    chipBorder: 'border-amber-500/30',
+    glowColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: 'border-l-amber-500',
   },
   expired: {
-    color: 'text-status-expired',
-    bg: 'bg-status-expired/10',
-    border: 'border-status-expired/20',
-    label: 'Vencido'
+    icon: XCircle,
+    label: 'Vencido',
+    chipBg: 'bg-red-500/20',
+    chipText: 'text-red-400',
+    chipBorder: 'border-red-500/30',
+    glowColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'border-l-red-500',
   }
 }
 
@@ -41,24 +50,21 @@ export default function ClientCard({
   hasNutritionPlan = false
 }: ClientCardProps) {
   const status = statusConfig[client.status]
+  const StatusIcon = status.icon
 
-  const formatDate = (dateString: string) => {
-    // Crear fecha local para evitar problemas de zona horaria
+  const formatDateShort = (dateString: string) => {
     const [year, month, day] = dateString.split('-').map(Number)
     const localDate = new Date(year, month - 1, day)
-    return format(localDate, 'dd MMM yyyy', { locale: es })
+    return format(localDate, 'dd MMM', { locale: es })
   }
 
-  // Calcular días restantes solo si está "por vencer"
+  // Calcular días restantes
   const getDaysRemaining = () => {
-    if (client.status !== 'expiring') return null
-
     const today = new Date()
     const [year, month, day] = client.end_date.split('-').map(Number)
     const endDate = new Date(year, month - 1, day)
     const diffTime = endDate.getTime() - today.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
     return diffDays
   }
 
@@ -68,103 +74,108 @@ export default function ClientCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2, scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
-      transition={{ duration: 0.2 }}
+      whileHover={{
+        y: -6,
+        scale: 1.02,
+        boxShadow: `0 12px 40px ${status.glowColor.replace('0.08', '0.25').replace('0.1', '0.3')}, 0 4px 12px rgba(0,0,0,0.4)`
+      }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       onClick={() => onClick(client)}
-      className="glass-card p-4 hover:shadow-lg hover:shadow-accent-primary/10 transition-all duration-300 relative cursor-pointer"
+      className={`relative overflow-hidden rounded-xl cursor-pointer border-l-4 ${status.borderColor}`}
+      style={{
+        background: `linear-gradient(135deg, rgba(26, 35, 50, 0.95) 0%, rgba(11, 20, 38, 0.98) 100%)`,
+        boxShadow: `0 4px 24px ${status.glowColor}, 0 1px 3px rgba(0,0,0,0.3)`,
+      }}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          {/* Profile Photo or Icon */}
+      {/* Glow effect overlay */}
+      <div
+        className="absolute inset-0 opacity-40 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse at top right, ${status.glowColor} 0%, transparent 60%)`
+        }}
+      />
+
+      <div className="relative p-4">
+        {/* Header Row */}
+        <div className="flex items-center gap-3 mb-3">
+          {/* Profile Photo */}
           {client.profile_photo_url ? (
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-accent-primary/50 flex-shrink-0">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 flex-shrink-0 shadow-lg">
               <img
                 src={client.profile_photo_url}
-                alt={`Foto de ${client.full_name}`}
+                alt={client.full_name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  // Fallback al icono si hay error al cargar la imagen
                   const target = e.target as HTMLImageElement
                   target.style.display = 'none'
-                  const fallback = target.parentElement?.nextElementSibling as HTMLElement
-                  if (fallback) fallback.style.display = 'flex'
                 }}
               />
             </div>
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-accent-primary to-accent-secondary rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+              <User className="w-6 h-6 text-white" />
             </div>
           )}
-          <div>
-            <h3 className="font-semibold text-white text-sm">{client.full_name}</h3>
-            <p className="text-xs text-slate-400">
-              {client.document_type}-{client.cedula}
-            </p>
+
+          {/* Name & ID */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white text-base truncate">{client.full_name}</h3>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span>{client.document_type}-{client.cedula}</span>
+              <span className="w-1 h-1 rounded-full bg-slate-500" />
+              <div className="flex items-center gap-1">
+                <Phone className="w-3 h-3" />
+                <span className="truncate">{client.phone}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Chip */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${status.chipBg} ${status.chipBorder} flex-shrink-0`}>
+            <StatusIcon className={`w-3.5 h-3.5 ${status.chipText}`} />
+            <span className={`text-xs font-medium ${status.chipText}`}>
+              {client.status === 'expiring' && daysRemaining > 0
+                ? `${daysRemaining}d`
+                : client.status === 'active' ? '✓' : '✗'
+              }
+            </span>
           </div>
         </div>
 
-        {/* Status Badge */}
-        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.bg} ${status.border} ${status.color} border`}>
-          <div className={`w-2 h-2 rounded-full mr-1.5 ${status.color.replace('text-', 'bg-')}`} />
-          {client.status === 'expiring' && daysRemaining !== null
-            ? `${daysRemaining} ${daysRemaining === 1 ? 'día' : 'días'}`
-            : status.label
-          }
-        </div>
-      </div>
-
-      {/* Contact Info */}
-      <div className="mb-3">
-        <div className="flex items-center space-x-2 text-xs text-slate-400">
-          <Phone className="w-3.5 h-3.5" />
-          <span>{client.phone}</span>
-        </div>
-      </div>
-
-      {/* Activity Badges */}
-      {(hasRoutine || hasNutritionPlan) && (
-        <div className="flex items-center gap-2 mb-3">
-          {hasRoutine && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-              <GiWeightLiftingUp className="w-3 h-3 text-orange-400" />
-              <span className="text-[10px] text-orange-400 font-medium">Rutina</span>
-            </div>
-          )}
-          {hasNutritionPlan && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <UtensilsCrossed className="w-3 h-3 text-emerald-400" />
-              <span className="text-[10px] text-emerald-400 font-medium">Plan Nutricional</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Dates and Duration - Single Row */}
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-1 text-slate-400">
-            <Calendar className="w-3 h-3" />
-            <span className="text-[10px]">Inicio</span>
+        {/* Bottom Row */}
+        <div className="flex items-center justify-between">
+          {/* Dates */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-slate-400">{formatDateShort(client.start_date)}</span>
+            <ArrowRight className="w-3 h-3 text-slate-500" />
+            <span className="text-white font-medium">{formatDateShort(client.end_date)}</span>
+            <span className="text-slate-500 ml-1">
+              ({client.duration_months}{client.duration_months === 1 ? 'mes' : 'm'})
+            </span>
           </div>
-          <p className="text-white font-medium text-[11px]">{formatDate(client.start_date)}</p>
-        </div>
 
-        <div className="space-y-1">
-          <div className="flex items-center space-x-1 text-slate-400">
-            <Clock className="w-3 h-3" />
-            <span className="text-[10px]">Fin</span>
+          {/* Activity Icons */}
+          <div className="flex items-center gap-1.5">
+            {hasRoutine && (
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="w-7 h-7 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center"
+                title="Tiene rutina asignada"
+              >
+                <GiWeightLiftingUp className="w-3.5 h-3.5 text-orange-400" />
+              </motion.div>
+            )}
+            {hasNutritionPlan && (
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center"
+                title="Tiene plan nutricional"
+              >
+                <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-400" />
+              </motion.div>
+            )}
           </div>
-          <p className="text-white font-medium text-[11px]">{formatDate(client.end_date)}</p>
-        </div>
-
-        <div className="space-y-1">
-          <span className="text-slate-400 text-[10px]">Duración</span>
-          <p className="text-accent-primary font-semibold text-[11px]">
-            {client.duration_months} {client.duration_months === 1 ? 'mes' : 'meses'}
-          </p>
         </div>
       </div>
     </motion.div>

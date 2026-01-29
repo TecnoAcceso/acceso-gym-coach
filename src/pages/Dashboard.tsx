@@ -540,6 +540,7 @@ _Powered by TecnoAcceso / ElectroShop_`
           color="from-blue-500 to-blue-600"
           delay={0.1}
           onClick={() => handleStatsCardClick('all')}
+          isActive={filterType === 'all'}
         />
         <StatsCard
           title="Activos"
@@ -548,6 +549,7 @@ _Powered by TecnoAcceso / ElectroShop_`
           color="from-green-500 to-green-600"
           delay={0.2}
           onClick={() => handleStatsCardClick('active')}
+          isActive={filterType === 'active'}
         />
         <StatsCard
           title="Por Vencer"
@@ -556,6 +558,7 @@ _Powered by TecnoAcceso / ElectroShop_`
           color="from-yellow-500 to-yellow-600"
           delay={0.3}
           onClick={() => handleStatsCardClick('expiring')}
+          isActive={filterType === 'expiring'}
         />
         <StatsCard
           title="Vencidos"
@@ -564,6 +567,7 @@ _Powered by TecnoAcceso / ElectroShop_`
           color="from-red-500 to-red-600"
           delay={0.4}
           onClick={() => handleStatsCardClick('expired')}
+          isActive={filterType === 'expired'}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { Plus, Edit, Trash2, User, Shield, Key, X } from 'lucide-react'
@@ -33,9 +33,10 @@ type UserForm = z.infer<typeof userSchema>
 
 interface UserManagementProps {
   onClose: () => void
+  onRefresh?: () => void
 }
 
-export default function UserManagement({ onClose }: UserManagementProps) {
+export default function UserManagement({ onClose, onRefresh }: UserManagementProps) {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -92,6 +93,7 @@ export default function UserManagement({ onClose }: UserManagementProps) {
       }
 
       await fetchUsers()
+      onRefresh?.() // Actualizar datos en LicenseManagement
       setShowForm(false)
       reset()
       setError('Usuario creado exitosamente.')
@@ -130,7 +132,7 @@ export default function UserManagement({ onClose }: UserManagementProps) {
     }
   }
 
-  const deleteUser = async (userId: string, authUserId: string) => {
+  const deleteUser = async (_userId: string, authUserId: string) => {
     if (!confirm('¿Estás seguro de eliminar este usuario?')) return
 
     try {
@@ -147,6 +149,7 @@ export default function UserManagement({ onClose }: UserManagementProps) {
 
       setError('Usuario eliminado exitosamente.')
       await fetchUsers()
+      onRefresh?.() // Actualizar datos en LicenseManagement
     } catch (err: any) {
       setError(err.message)
     }

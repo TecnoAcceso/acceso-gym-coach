@@ -28,10 +28,10 @@ export default function Navigation() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.6 }}
-      className="fixed bottom-6 left-4 right-4 z-10"
+      className="fixed bottom-16 left-4 right-4 z-10"
     >
       <div className="max-w-md mx-auto">
-        <div className="relative flex justify-center items-center h-[70px] bg-dark-200/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-visible">
+        <div className="relative flex justify-center items-center h-[70px] bg-dark-200/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl overflow-visible">
           {/* Indicator - El círculo mágico */}
           <motion.div
             className="absolute w-[60px] h-[60px] rounded-full border-[6px] border-[#0B1426] z-0"

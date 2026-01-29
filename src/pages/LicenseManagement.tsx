@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
-import { format, addDays, addMonths, addYears } from 'date-fns'
+import { format, addMonths, addYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const licenseSchema = z.object({
@@ -65,6 +65,7 @@ export default function LicenseManagement() {
   const [isCreating, setIsCreating] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showUserManagement, setShowUserManagement] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all')
   const [showRenewModal, setShowRenewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -364,6 +365,24 @@ export default function LicenseManagement() {
     return diffDays
   }
 
+  // Filtrar licencias según el estado seleccionado
+  const filteredLicenses = licenses.filter(license => {
+    if (statusFilter === 'all') return true
+
+    const daysRemaining = calculateDaysRemaining(license.expiry_date)
+
+    switch (statusFilter) {
+      case 'active':
+        return daysRemaining > 3
+      case 'expiring':
+        return daysRemaining > 0 && daysRemaining <= 3
+      case 'expired':
+        return daysRemaining <= 0
+      default:
+        return true
+    }
+  })
+
   const sendWhatsAppReminder = (license: License) => {
     const daysRemaining = calculateDaysRemaining(license.expiry_date)
     const userName = license.user_profile?.full_name || 'Usuario'
@@ -442,13 +461,20 @@ export default function LicenseManagement() {
         </div>
       </motion.div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Clickeables para filtrar */}
       <div className="grid grid-cols-2 gap-4">
-        <motion.div
+        <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-card p-4"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setStatusFilter(statusFilter === 'all' ? 'all' : 'all')}
+          className={`glass-card p-4 text-left transition-all duration-300 ${
+            statusFilter === 'all'
+              ? 'ring-2 ring-blue-500 bg-blue-500/10'
+              : 'hover:bg-white/5'
+          }`}
         >
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
@@ -459,13 +485,20 @@ export default function LicenseManagement() {
               <p className="text-xl font-bold text-white">{licenses.length}</p>
             </div>
           </div>
-        </motion.div>
+        </motion.button>
 
-        <motion.div
+        <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-card p-4"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+          className={`glass-card p-4 text-left transition-all duration-300 ${
+            statusFilter === 'active'
+              ? 'ring-2 ring-green-500 bg-green-500/10'
+              : 'hover:bg-white/5'
+          }`}
         >
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
@@ -481,13 +514,20 @@ export default function LicenseManagement() {
               </p>
             </div>
           </div>
-        </motion.div>
+        </motion.button>
 
-        <motion.div
+        <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass-card p-4"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setStatusFilter(statusFilter === 'expiring' ? 'all' : 'expiring')}
+          className={`glass-card p-4 text-left transition-all duration-300 ${
+            statusFilter === 'expiring'
+              ? 'ring-2 ring-yellow-500 bg-yellow-500/10'
+              : 'hover:bg-white/5'
+          }`}
         >
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
@@ -503,13 +543,20 @@ export default function LicenseManagement() {
               </p>
             </div>
           </div>
-        </motion.div>
+        </motion.button>
 
-        <motion.div
+        <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card p-4"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setStatusFilter(statusFilter === 'expired' ? 'all' : 'expired')}
+          className={`glass-card p-4 text-left transition-all duration-300 ${
+            statusFilter === 'expired'
+              ? 'ring-2 ring-red-500 bg-red-500/10'
+              : 'hover:bg-white/5'
+          }`}
         >
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
@@ -518,11 +565,11 @@ export default function LicenseManagement() {
             <div>
               <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Vencidas</p>
               <p className="text-xl font-bold text-white">
-                {licenses.filter(l => l.status === 'expired').length}
+                {licenses.filter(l => calculateDaysRemaining(l.expiry_date) <= 0).length}
               </p>
             </div>
           </div>
-        </motion.div>
+        </motion.button>
       </div>
 
       {/* Create License Form */}
@@ -670,19 +717,41 @@ export default function LicenseManagement() {
       >
         <h3 className="text-lg font-semibold text-white mb-6">Licencias Registradas</h3>
 
+        {/* Indicador de filtro activo */}
+        {statusFilter !== 'all' && (
+          <div className="mb-4 flex items-center justify-between p-3 bg-dark-200/50 rounded-lg border border-white/10">
+            <span className="text-sm text-slate-300">
+              Mostrando: <span className="font-medium text-white">
+                {statusFilter === 'active' ? 'Activas' : statusFilter === 'expiring' ? 'Por Vencer' : 'Vencidas'}
+              </span>
+              {' '}({filteredLicenses.length} de {licenses.length})
+            </span>
+            <button
+              onClick={() => setStatusFilter('all')}
+              className="text-xs text-accent-primary hover:text-accent-secondary transition-colors"
+            >
+              Ver todas
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-8 text-slate-400">Cargando licencias...</div>
-        ) : licenses.length === 0 ? (
+        ) : filteredLicenses.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-dark-200/50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">No hay licencias registradas</h3>
-            <p className="text-sm text-slate-400">Crea tu primera licencia para comenzar</p>
+            <h3 className="text-lg font-medium text-white mb-2">
+              {licenses.length === 0 ? 'No hay licencias registradas' : 'No hay licencias con este filtro'}
+            </h3>
+            <p className="text-sm text-slate-400">
+              {licenses.length === 0 ? 'Crea tu primera licencia para comenzar' : 'Prueba con otro filtro'}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {licenses.map((license, index) => {
+            {filteredLicenses.map((license, index) => {
               const daysRemaining = calculateDaysRemaining(license.expiry_date)
 
               return (
@@ -1108,7 +1177,13 @@ export default function LicenseManagement() {
 
       {/* User Management Modal */}
       {showUserManagement && (
-        <UserManagement onClose={() => setShowUserManagement(false)} />
+        <UserManagement
+          onClose={() => setShowUserManagement(false)}
+          onRefresh={() => {
+            fetchUsers()
+            fetchLicenses()
+          }}
+        />
       )}
 
       {/* Toast Notification */}
