@@ -15,7 +15,6 @@ interface CoachPublic {
   full_name: string
   avatar_url: string | null
   specialty: string | null
-  client_count: number
 }
 
 // ── Features reales de la app ────────────────────────────────────────────────
@@ -491,10 +490,6 @@ export default function Landing() {
                       {coach.specialty && (
                         <p className="text-[#00D4FF] text-sm mt-1">{coach.specialty}</p>
                       )}
-                      <div className="mt-3 inline-flex items-center gap-1.5 bg-[#0B1426]/60 px-3 py-1 rounded-full">
-                        <Users className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs text-slate-400">{coach.client_count} clientes</span>
-                      </div>
                     </div>
                   ))}
                 </motion.div>
