@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { Eye, EyeOff, Dumbbell, MessageCircle, X } from 'lucide-react'
+import { MdArrowBackIosNew } from 'react-icons/md'
+import { useNavigate } from 'react-router-dom'
 import Toast, { ToastType } from '@/components/Toast'
 
 const loginSchema = z.object({
@@ -22,6 +24,7 @@ type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
 
 export default function Login() {
   const { signIn } = useAuth()
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -123,7 +126,19 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-300 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-dark-300 flex items-center justify-center p-4 relative">
+      {/* Botón volver al Landing */}
+      <motion.button
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => navigate('/')}
+        className="absolute top-5 left-5 w-9 h-9 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors flex items-center justify-center"
+      >
+        <MdArrowBackIosNew className="w-3.5 h-3.5" />
+      </motion.button>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

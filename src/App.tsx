@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
+import Landing from '@/pages/Landing'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import ClientForm from '@/pages/ClientForm'
@@ -57,16 +58,11 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/license-expired" element={<LicenseExpired />} />
       <Route
-        path="/login"
-        element={user ? <Navigate to="/dashboard" replace /> : <Login />}
-      />
-      <Route
-        path="/license-expired"
-        element={<LicenseExpired />}
-      />
-      <Route
-        path="/"
+        path="/app"
         element={
           <ProtectedRoute>
             <Layout />
@@ -74,6 +70,14 @@ function AppRoutes() {
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
+      </Route>
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients/new" element={<ClientForm />} />
         <Route path="clients/edit/:id" element={<ClientForm />} />
@@ -85,7 +89,7 @@ function AppRoutes() {
         <Route path="settings" element={<Settings />} />
         <Route path="license-management" element={<LicenseManagement />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

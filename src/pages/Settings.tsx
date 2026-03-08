@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
 import { useClients } from '@/hooks/useClients'
-import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -36,6 +36,9 @@ export default function Settings() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -53,6 +56,86 @@ export default function Settings() {
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ show: true, message, type })
+  }
+
+  // Cargar avatar actual al montar
+  React.useEffect(() => {
+    const loadAvatar = async () => {
+      if (!user?.id) return
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('avatar_url')
+        .eq('auth_user_id', user.id)
+        .single()
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url)
+    }
+    loadAvatar()
+  }, [user?.id])
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user?.id) return
+
+    // Solo imágenes, max 2MB
+    if (!file.type.startsWith('image/')) {
+      showToast('Solo se permiten imágenes', 'error')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('La imagen no puede superar 2MB', 'error')
+      return
+    }
+
+    setIsUploadingAvatar(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const filePath = `avatars/${user.id}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath)
+
+      const publicUrl = urlData.publicUrl
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('auth_user_id', user.id)
+
+      if (updateError) throw updateError
+
+      setAvatarUrl(publicUrl)
+      showToast('Foto de perfil actualizada', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Error al subir la foto', 'error')
+    } finally {
+      setIsUploadingAvatar(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    if (!user?.id) return
+    setIsUploadingAvatar(true)
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ avatar_url: null })
+        .eq('auth_user_id', user.id)
+      if (error) throw error
+      setAvatarUrl(null)
+      showToast('Foto de perfil eliminada', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Error al eliminar la foto', 'error')
+    } finally {
+      setIsUploadingAvatar(false)
+    }
   }
 
   const onChangePassword = async (data: ChangePasswordForm) => {
@@ -277,12 +360,60 @@ export default function Settings() {
         className="glass-card p-6"
       >
         <div className="flex items-center space-x-4 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full flex items-center justify-center">
-            <User className="w-6 h-6 text-white" />
+          {/* Avatar */}
+          <div className="relative flex-shrink-0">
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-r from-accent-primary to-accent-secondary flex items-center justify-center">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-7 h-7 text-white" />
+              )}
+            </div>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white">{user?.full_name || 'Usuario'}</h3>
             <p className="text-sm text-slate-400">@{user?.username}</p>
+          </div>
+        </div>
+
+        {/* Foto de perfil */}
+        <div className="mb-4 p-4 bg-dark-200/30 rounded-lg border border-white/5">
+          <div className="flex items-center gap-2 mb-3">
+            <Camera className="w-4 h-4 text-accent-primary" />
+            <p className="text-sm font-medium text-white">Foto de perfil</p>
+          </div>
+          <p className="text-xs text-slate-400 mb-3">
+            Se mostrara en el carrusel del Landing Page. Max 2MB.
+          </p>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarUpload}
+          />
+          <div className="flex gap-2">
+            <motion.button
+              whileHover={{ scale: isUploadingAvatar ? 1 : 1.02 }}
+              whileTap={{ scale: isUploadingAvatar ? 1 : 0.98 }}
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="flex-1 py-2 px-3 bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-sm font-medium rounded-lg hover:bg-accent-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Camera className="w-4 h-4" />
+              {isUploadingAvatar ? 'Subiendo...' : avatarUrl ? 'Cambiar foto' : 'Subir foto'}
+            </motion.button>
+            {avatarUrl && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleRemoveAvatar}
+                disabled={isUploadingAvatar}
+                className="py-2 px-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm font-medium rounded-lg hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" />
+              </motion.button>
+            )}
           </div>
         </div>
 

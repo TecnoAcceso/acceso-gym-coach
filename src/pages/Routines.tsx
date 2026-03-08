@@ -130,7 +130,7 @@ export default function Routines() {
         </div>
 
         {/* Search and Filter */}
-        <div className="mt-4 flex space-x-2">
+        <div className="flex space-x-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -195,25 +195,25 @@ export default function Routines() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="glass-card p-4 hover:shadow-lg hover:shadow-accent-primary/10 transition-all duration-300 cursor-pointer"
+                className="glass-card p-3 hover:shadow-lg hover:shadow-accent-primary/10 transition-all duration-300 cursor-pointer"
                 onClick={() => handleManageExercises(template)}
               >
                 <div onClick={(e) => e.stopPropagation()}>
                   {/* Header con título, descripción y botones */}
                   <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white mb-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-white mb-0.5 line-clamp-1">
                         {template.name}
                       </h3>
                       {template.description && (
-                        <p className="text-sm text-slate-400 mb-3">
+                        <p className="text-xs text-slate-400 mb-2 line-clamp-2">
                           {template.description}
                         </p>
                       )}
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center space-x-1.5 ml-4">
+                    <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -221,7 +221,7 @@ export default function Routines() {
                           e.stopPropagation()
                           handleManageExercises(template)
                         }}
-                        className="flex items-center justify-center p-2 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/30 transition-all duration-200"
+                        className="flex items-center justify-center p-1.5 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/30 transition-all duration-200"
                         title="Gestionar ejercicios"
                       >
                         <ListOrdered className="w-4 h-4" />
@@ -233,7 +233,7 @@ export default function Routines() {
                           e.stopPropagation()
                           handleEditRoutine(template)
                         }}
-                        className="flex items-center justify-center p-2 bg-accent-primary/20 border border-accent-primary/30 rounded-lg text-accent-primary hover:bg-accent-primary/30 transition-all duration-200"
+                        className="flex items-center justify-center p-1.5 bg-accent-primary/20 border border-accent-primary/30 rounded-lg text-accent-primary hover:bg-accent-primary/30 transition-all duration-200"
                         title="Editar rutina"
                       >
                         <Edit className="w-4 h-4" />
@@ -245,7 +245,7 @@ export default function Routines() {
                           e.stopPropagation()
                           handleDeleteRoutine(template)
                         }}
-                        className="flex items-center justify-center p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all duration-200"
+                        className="flex items-center justify-center p-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all duration-200"
                         title="Eliminar rutina"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -254,21 +254,21 @@ export default function Routines() {
                   </div>
 
                   {/* Badges debajo del título/descripción */}
-                  <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
                     {template.category && (
-                      <span className={`text-xs px-2 py-1 rounded-full border whitespace-nowrap ${categoryColors[template.category]}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${categoryColors[template.category]}`}>
                         {template.category.replace('_', ' ')}
                       </span>
                     )}
                     {template.difficulty && (
-                      <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${difficultyColors[template.difficulty]}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${difficultyColors[template.difficulty]}`}>
                         {template.difficulty}
                       </span>
                     )}
-                    <span className="text-xs px-2 py-1 rounded-full bg-slate-500/20 text-slate-400 whitespace-nowrap">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-400 whitespace-nowrap">
                       {template.duration_weeks} {template.duration_weeks === 1 ? 'semana' : 'semanas'}
                     </span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 whitespace-nowrap">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 whitespace-nowrap">
                       {template.exercise_count || 0} {template.exercise_count === 1 ? 'ejercicio' : 'ejercicios'}
                     </span>
                   </div>
