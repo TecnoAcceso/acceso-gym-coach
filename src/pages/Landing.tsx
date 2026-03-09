@@ -82,6 +82,13 @@ const features = [
     title: 'PWA Instalable',
     desc: 'Instala la app en tu iPhone o Android como una app nativa. Funciona perfectamente desde cualquier dispositivo sin necesidad de tienda de apps.',
   },
+  {
+    icon: FileText,
+    color: 'from-teal-500 to-cyan-600',
+    glow: 'rgba(20,184,166,0.25)',
+    title: 'Respaldo Completo en Excel',
+    desc: 'Exporta toda tu informacion con un solo toque: clientes, medidas, rutinas, planes nutricionales y fotos de progreso en un archivo Excel organizado.',
+  },
 ]
 
 // ── Ventajas reales ──────────────────────────────────────────────────────────
@@ -89,7 +96,7 @@ const advantages = [
   { icon: Bell, text: 'Alertas automaticas de vencimiento — nunca mas pierdas un cliente por no avisarle a tiempo' },
   { icon: Search, text: 'Busqueda instantanea por nombre, cedula o telefono entre todos tus clientes' },
   { icon: Camera, text: 'Comparacion de fotos antes/despues exportable en PDF y enviable por WhatsApp' },
-  { icon: Lock, text: 'Sistema de licencias por coach con roles: superusuario y entrenador regular' },
+  { icon: Lock, text: 'Exporta un backup completo en Excel con todos tus clientes, medidas, rutinas, planes nutricionales y fotos de progreso con un solo toque' },
   { icon: TrendingUp, text: 'Historial completo de medidas corporales con evolucion del progreso fisico' },
   { icon: Clipboard, text: 'Plantillas reutilizables de rutinas y planes nutricionales: crea una vez, usala siempre' },
   { icon: Zap, text: 'PWA instalable en iOS y Android — gestiona tus clientes desde dentro del gimnasio' },
@@ -141,7 +148,12 @@ export default function Landing() {
       try {
         const { data, error } = await supabase.rpc('get_public_coaches')
         if (!error && data && data.length > 0) {
-          setCoaches(data)
+          const sorted = [...data].sort((a, b) => {
+            if (a.avatar_url && !b.avatar_url) return -1
+            if (!a.avatar_url && b.avatar_url) return 1
+            return 0
+          })
+          setCoaches(sorted)
         }
       } catch {
         // silencioso si no hay coaches disponibles
@@ -154,30 +166,30 @@ export default function Landing() {
 
   // Auto-avance del carrusel
   useEffect(() => {
-    if (coaches.length <= 3) return
+    if (coaches.length <= 4) return
     const interval = setInterval(() => {
       setCoachDirection(1)
-      setCoachIndex(prev => (prev + 3) % coaches.length)
+      setCoachIndex(prev => (prev + 4) % coaches.length)
     }, 3500)
     return () => clearInterval(interval)
   }, [coaches.length])
 
   const prevCoachPage = () => {
     setCoachDirection(-1)
-    setCoachIndex(prev => (prev - 3 + coaches.length) % coaches.length)
+    setCoachIndex(prev => (prev - 4 + coaches.length) % coaches.length)
   }
 
   const nextCoachPage = () => {
     setCoachDirection(1)
-    setCoachIndex(prev => (prev + 3) % coaches.length)
+    setCoachIndex(prev => (prev + 4) % coaches.length)
   }
 
-  const visibleCoaches = coaches.slice(coachIndex, coachIndex + 3).concat(
-    coachIndex + 3 > coaches.length ? coaches.slice(0, (coachIndex + 3) % coaches.length) : []
-  ).slice(0, 3)
+  const visibleCoaches = coaches.slice(coachIndex, coachIndex + 4).concat(
+    coachIndex + 4 > coaches.length ? coaches.slice(0, (coachIndex + 4) % coaches.length) : []
+  ).slice(0, 4)
 
-  const totalPages = Math.ceil(coaches.length / 3)
-  const currentPage = Math.floor(coachIndex / 3)
+  const totalPages = Math.ceil(coaches.length / 4)
+  const currentPage = Math.floor(coachIndex / 4)
 
   return (
     <div className="min-h-screen bg-[#0B1426] text-white overflow-x-hidden">
@@ -473,30 +485,32 @@ export default function Landing() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -coachDirection * 60 }}
                   transition={{ duration: 0.4 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
                 >
                   {visibleCoaches.map((coach, i) => (
-                    <div key={i} className="p-6 rounded-2xl bg-[#1A2332]/60 border border-white/8 text-center">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden bg-gradient-to-br from-[#00D4FF]/30 to-[#7C3AED]/30 flex items-center justify-center">
-                        {coach.avatar_url ? (
-                          <img src={coach.avatar_url} alt={coach.full_name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-2xl font-bold text-white">
+                    <div key={i} className="rounded-2xl border border-white/8 bg-[#1A2332]/60 overflow-hidden relative h-56">
+                      {coach.avatar_url ? (
+                        <img src={coach.avatar_url} alt={coach.full_name} className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#00D4FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
+                          <span className="text-5xl font-black text-white/20">
                             {coach.full_name.charAt(0).toUpperCase()}
                           </span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-2 pt-6 pb-2 text-center">
+                        <h3 className="font-bold text-white text-xs leading-tight">{coach.full_name}</h3>
+                        {coach.specialty && (
+                          <p className="text-[#00D4FF] text-[10px] mt-0.5">{coach.specialty}</p>
                         )}
                       </div>
-                      <h3 className="font-bold text-white text-lg">{coach.full_name}</h3>
-                      {coach.specialty && (
-                        <p className="text-[#00D4FF] text-sm mt-1">{coach.specialty}</p>
-                      )}
                     </div>
                   ))}
                 </motion.div>
               </AnimatePresence>
 
               {/* Controles de navegacion */}
-              {coaches.length > 3 && (
+              {coaches.length > 4 && (
                 <div className="flex items-center justify-center gap-4 mt-8">
                   <button
                     onClick={prevCoachPage}
@@ -510,7 +524,7 @@ export default function Landing() {
                         key={i}
                         onClick={() => {
                           setCoachDirection(i > currentPage ? 1 : -1)
-                          setCoachIndex(i * 3)
+                          setCoachIndex(i * 4)
                         }}
                         className={`w-2 h-2 rounded-full transition-colors ${currentPage === i ? 'bg-[#00D4FF]' : 'bg-white/20'}`}
                       />
