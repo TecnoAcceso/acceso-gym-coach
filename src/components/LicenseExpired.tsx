@@ -1,8 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldX, Phone, Users, LogOut } from 'lucide-react'
+import { ShieldX, Phone, Users, LogOut, CreditCard } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
+import PaymentModal from '@/components/PaymentModal'
 
 interface LicenseExpiredProps {
   onContactSupport?: () => void
@@ -10,6 +11,7 @@ interface LicenseExpiredProps {
 
 export default function LicenseExpired({ onContactSupport }: LicenseExpiredProps) {
   const { signOut } = useAuth()
+  const [paymentOpen, setPaymentOpen] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -71,6 +73,17 @@ export default function LicenseExpired({ onContactSupport }: LicenseExpiredProps
           className="space-y-4"
         >
           <h3 className="text-lg font-semibold text-white mb-4">Contacta Soporte</h3>
+
+          {/* Botón renovar licencia */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setPaymentOpen(true)}
+            className="w-full flex items-center justify-center space-x-3 px-6 py-3 bg-gradient-to-r from-[#00D4FF] to-[#0EA5E9] text-[#0B1426] font-bold rounded-lg transition-all duration-300 shadow-lg shadow-[#00D4FF]/25 hover:shadow-[#00D4FF]/40 mb-2"
+          >
+            <CreditCard className="w-5 h-5" />
+            <span>Renovar licencia</span>
+          </motion.button>
 
           {/* WhatsApp Button */}
           <motion.button
@@ -138,6 +151,8 @@ export default function LicenseExpired({ onContactSupport }: LicenseExpiredProps
           </p>
         </motion.div>
       </motion.div>
+
+      <PaymentModal open={paymentOpen} onClose={() => setPaymentOpen(false)} />
     </div>
   )
 }

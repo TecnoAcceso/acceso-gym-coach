@@ -20,7 +20,11 @@ import {
   XCircle,
   Edit,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
+  CheckCircle2,
+  Clock,
+  Ban,
 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
@@ -73,6 +77,9 @@ export default function LicenseManagement() {
   const [renewDate, setRenewDate] = useState('')
   const [editDate, setEditDate] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [activeTab, setActiveTab] = useState<'licenses' | 'payments'>('licenses')
+  const [paymentRequests, setPaymentRequests] = useState<any[]>([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -334,9 +341,85 @@ export default function LicenseManagement() {
     setEditDate(expiryDate.toISOString().split('T')[0])
   }
 
+  const fetchPayments = async () => {
+    setPaymentsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('payment_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (!error && data) setPaymentRequests(data)
+    } finally {
+      setPaymentsLoading(false)
+    }
+  }
+
+  const handleApprovePayment = async (payment: any) => {
+    setIsProcessing(true)
+    try {
+      // Buscar la licencia existente del trainer
+      const { data: existingLicense } = await supabase
+        .from('licenses')
+        .select('*')
+        .eq('trainer_id', payment.trainer_profile_id)
+        .single()
+
+      const baseDate = existingLicense?.expiry_date
+        ? new Date(existingLicense.expiry_date) > new Date()
+          ? new Date(existingLicense.expiry_date)
+          : new Date()
+        : new Date()
+
+      const newExpiry = addMonths(baseDate, 1).toISOString().split('T')[0]
+
+      if (existingLicense) {
+        await supabase
+          .from('licenses')
+          .update({ expiry_date: newExpiry, status: 'active' })
+          .eq('id', existingLicense.id)
+      } else {
+        await supabase.from('licenses').insert({
+          license_key: `PAY-${payment.id.slice(0, 8).toUpperCase()}`,
+          trainer_id: payment.trainer_profile_id,
+          expiry_date: newExpiry,
+          status: 'active',
+        })
+      }
+
+      await supabase
+        .from('payment_requests')
+        .update({ status: 'approved' })
+        .eq('id', payment.id)
+
+      showToast('Licencia activada correctamente', 'success')
+      fetchPayments()
+    } catch (err: any) {
+      showToast(err.message || 'Error al aprobar', 'error')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleRejectPayment = async (paymentId: string) => {
+    setIsProcessing(true)
+    try {
+      await supabase
+        .from('payment_requests')
+        .update({ status: 'rejected' })
+        .eq('id', paymentId)
+      showToast('Solicitud rechazada', 'success')
+      fetchPayments()
+    } catch (err: any) {
+      showToast(err.message || 'Error al rechazar', 'error')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   React.useEffect(() => {
     fetchUsers()
     fetchLicenses()
+    fetchPayments()
   }, [])
 
   const getStatusColor = (status: string) => {
@@ -460,6 +543,115 @@ export default function LicenseManagement() {
           </motion.button>
         </div>
       </motion.div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-white/8 pb-0">
+        <button
+          onClick={() => setActiveTab('licenses')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+            activeTab === 'licenses'
+              ? 'bg-[#1A2332] text-[#00D4FF] border border-b-0 border-white/10'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          Licencias
+        </button>
+        <button
+          onClick={() => { setActiveTab('payments'); fetchPayments() }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors relative ${
+            activeTab === 'payments'
+              ? 'bg-[#1A2332] text-[#00D4FF] border border-b-0 border-white/10'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          Pagos
+          {paymentRequests.filter(p => p.status === 'pending').length > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">
+              {paymentRequests.filter(p => p.status === 'pending').length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── TAB: PAGOS ── */}
+      {activeTab === 'payments' && (
+        <div className="space-y-3">
+          {paymentsLoading ? (
+            <div className="text-center py-12 text-slate-400">Cargando pagos...</div>
+          ) : paymentRequests.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p>No hay solicitudes de pago</p>
+            </div>
+          ) : (
+            paymentRequests.map(payment => (
+              <motion.div
+                key={payment.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-white font-semibold text-sm truncate">{payment.full_name}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${
+                        payment.status === 'pending'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : payment.status === 'approved'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      }`}>
+                        {payment.status === 'pending' ? 'Pendiente' : payment.status === 'approved' ? 'Aprobado' : 'Rechazado'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-slate-400">
+                      <span>Banco: <span className="text-white">{payment.bank}</span></span>
+                      <span>Ref: <span className="text-white">{payment.reference}</span></span>
+                      <span>Fecha: <span className="text-white">{format(new Date(payment.payment_date), 'dd/MM/yyyy')}</span></span>
+                      <span>Plan: <span className="text-[#00D4FF]">{payment.amount_eur} EUR/mes</span></span>
+                    </div>
+                  </div>
+
+                  {payment.status === 'pending' && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleApprovePayment(payment)}
+                        disabled={isProcessing}
+                        className="p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50"
+                        title="Aprobar"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleRejectPayment(payment.id)}
+                        disabled={isProcessing}
+                        className="p-2 bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-400 hover:bg-rose-500/30 disabled:opacity-50"
+                        title="Rechazar"
+                      >
+                        <Ban className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-600 mt-2">
+                  {format(new Date(payment.created_at), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                </p>
+              </motion.div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ── TAB: LICENCIAS ── */}
+      {activeTab === 'licenses' && (
+        <div className="space-y-6">
 
       {/* Stats Cards - Clickeables para filtrar */}
       <div className="grid grid-cols-2 gap-4">
@@ -1172,6 +1364,9 @@ export default function LicenseManagement() {
               </motion.button>
             </div>
           </motion.div>
+        </div>
+      )}
+
         </div>
       )}
 

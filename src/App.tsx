@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 import Landing from '@/pages/Landing'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
@@ -51,6 +52,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { user, loading } = useAuth()
+  usePushNotifications()
 
   if (loading) {
     return <LoadingSpinner />

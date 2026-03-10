@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
 import { useClients } from '@/hooks/useClients'
-import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2 } from 'lucide-react'
+import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2, CreditCard, Save } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -333,8 +333,50 @@ export default function Settings() {
     }
   }
 
-  // Simular verificación de superusuario
-  const isSuperUser = user?.username === 'admin' || user?.username === 'superuser'
+  const isSuperUser = user?.role === 'superuser'
+
+  // ── Datos de cobro (solo superuser) ──────────────────────────────────────
+  const [paymentSettings, setPaymentSettings] = useState({
+    pagomovil_bank: '',
+    pagomovil_phone: '',
+    pagomovil_cedula: '',
+    zelle_email: '',
+  })
+  const [isSavingPayment, setIsSavingPayment] = useState(false)
+
+  useEffect(() => {
+    if (!isSuperUser) return
+    const loadSettings = async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['pagomovil_bank', 'pagomovil_phone', 'pagomovil_cedula', 'zelle_email'])
+      if (data) {
+        const mapped: Record<string, string> = {}
+        data.forEach((row: { key: string; value: string }) => { mapped[row.key] = row.value || '' })
+        setPaymentSettings(prev => ({ ...prev, ...mapped }))
+      }
+    }
+    loadSettings()
+  }, [isSuperUser])
+
+  const handleSavePaymentSettings = async () => {
+    setIsSavingPayment(true)
+    try {
+      const updates = Object.entries(paymentSettings).map(([key, value]) => ({
+        key,
+        value,
+        updated_at: new Date().toISOString(),
+      }))
+      const { error } = await supabase.from('app_settings').upsert(updates, { onConflict: 'key' })
+      if (error) throw error
+      showToast('Datos de cobro guardados', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Error al guardar', 'error')
+    } finally {
+      setIsSavingPayment(false)
+    }
+  }
 
   return (
     <div className="p-4 pb-20 max-w-md mx-auto space-y-6">
@@ -540,6 +582,7 @@ export default function Settings() {
 
       {/* SuperUser Section */}
       {isSuperUser && (
+        <>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -565,6 +608,76 @@ export default function Settings() {
             Acceso exclusivo para superusuarios
           </p>
         </motion.div>
+
+        {/* Datos de cobro — solo superuser */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.17 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <CreditCard className="w-6 h-6 text-accent-primary" />
+            <div>
+              <h3 className="font-semibold text-white">Datos de Cobro</h3>
+              <p className="text-xs text-slate-400">PagoMovil y Zelle para recibir pagos</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Banco (PagoMovil)</label>
+              <input
+                type="text"
+                value={paymentSettings.pagomovil_bank}
+                onChange={e => setPaymentSettings(p => ({ ...p, pagomovil_bank: e.target.value }))}
+                placeholder="Ej: Banesco"
+                className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm placeholder-slate-500 focus:border-accent-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Telefono (PagoMovil)</label>
+              <input
+                type="text"
+                value={paymentSettings.pagomovil_phone}
+                onChange={e => setPaymentSettings(p => ({ ...p, pagomovil_phone: e.target.value }))}
+                placeholder="Ej: 04120557690"
+                className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm placeholder-slate-500 focus:border-accent-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Cedula (PagoMovil)</label>
+              <input
+                type="text"
+                value={paymentSettings.pagomovil_cedula}
+                onChange={e => setPaymentSettings(p => ({ ...p, pagomovil_cedula: e.target.value }))}
+                placeholder="Ej: V-12345678"
+                className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm placeholder-slate-500 focus:border-accent-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Zelle (opcional)</label>
+              <input
+                type="text"
+                value={paymentSettings.zelle_email}
+                onChange={e => setPaymentSettings(p => ({ ...p, zelle_email: e.target.value }))}
+                placeholder="Ej: correo@gmail.com o telefono"
+                className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm placeholder-slate-500 focus:border-accent-primary focus:outline-none"
+              />
+            </div>
+            <motion.button
+              whileHover={{ scale: isSavingPayment ? 1 : 1.02 }}
+              whileTap={{ scale: isSavingPayment ? 1 : 0.98 }}
+              onClick={handleSavePaymentSettings}
+              disabled={isSavingPayment}
+              className="w-full py-2.5 px-4 bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-sm font-medium rounded-lg hover:bg-accent-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {isSavingPayment ? 'Guardando...' : 'Guardar datos de cobro'}
+            </motion.button>
+          </div>
+        </motion.div>
+        </>
       )}
 
       {/* License Information */}

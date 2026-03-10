@@ -6,6 +6,9 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
+            strategies: 'injectManifest',
+            srcDir: 'src',
+            filename: 'sw-custom.ts',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
             manifest: {
                 name: 'AccesoGym Coach',
@@ -28,21 +31,8 @@ export default defineConfig({
                     }
                 ]
             },
-            workbox: {
-                globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-                runtimeCaching: [
-                    {
-                        urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-                        handler: 'CacheFirst',
-                        options: {
-                            cacheName: 'google-fonts-cache',
-                            expiration: {
-                                maxEntries: 10,
-                                maxAgeSeconds: 60 * 60 * 24 * 365
-                            }
-                        }
-                    }
-                ]
+            injectManifest: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg}']
             }
         })
     ],

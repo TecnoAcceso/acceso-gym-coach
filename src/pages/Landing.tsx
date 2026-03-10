@@ -5,7 +5,8 @@ import {
   Dumbbell, Users, BarChart3, Zap, Shield,
   ArrowRight, ChevronDown, Flame,
   Apple, Clipboard, TrendingUp, Award, Smartphone,
-  Camera, FileText, Search, Bell, Lock, ChevronLeft, ChevronRight
+  Camera, FileText, Search, Bell, Lock, ChevronLeft, ChevronRight,
+  Gift, Star, CheckCircle2
 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { supabase } from '@/lib/supabase'
@@ -137,9 +138,25 @@ export default function Landing() {
   const [coachIndex, setCoachIndex] = useState(0)
   const [coachDirection, setCoachDirection] = useState(1)
   const [coachesLoading, setCoachesLoading] = useState(true)
+  const [eurToBs, setEurToBs] = useState<number | null>(null)
 
   useEffect(() => {
     document.title = 'AccesoGym Coach - La herramienta del coach moderno'
+  }, [])
+
+  // Tasa EUR → VES desde BCV via exchangerate-api
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/EUR')
+        const data = await res.json()
+        const ves = data?.rates?.VES
+        if (ves) setEurToBs(ves)
+      } catch {
+        // silencioso
+      }
+    }
+    fetchRate()
   }, [])
 
   // Cargar coaches reales desde Supabase
@@ -568,6 +585,85 @@ export default function Landing() {
               )
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ── PRECIOS ── */}
+      <section id="precios" className="relative z-10 py-24 px-6">
+        <div className="max-w-xl mx-auto">
+          <FadeIn className="text-center mb-12">
+            <p className="text-[#00D4FF] text-sm font-semibold uppercase tracking-widest mb-3">Precio</p>
+            <h2 className="text-4xl md:text-5xl font-black mb-4">Simple y transparente</h2>
+            <p className="text-slate-400 text-lg max-w-md mx-auto">
+              Sin sorpresas. Un solo plan con todo incluido.
+            </p>
+          </FadeIn>
+
+          <FadeIn>
+            <div className="relative">
+              {/* Glow */}
+              <div className="absolute inset-0 bg-[#00D4FF]/8 blur-3xl rounded-3xl" />
+              <div className="relative bg-[#1A2332]/80 border border-[#00D4FF]/30 rounded-3xl p-8 backdrop-blur-xl">
+
+                {/* Badge 15 días gratis */}
+                <div className="flex justify-center mb-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#00D4FF]/20 to-emerald-500/20 border border-[#00D4FF]/30 text-[#00D4FF] text-sm font-bold">
+                    <Gift className="w-4 h-4" />
+                    15 días GRATIS al registrarte
+                  </div>
+                </div>
+
+                {/* Precio */}
+                <div className="text-center mb-8">
+                  <div className="flex items-end justify-center gap-2 mb-1">
+                    <span className="text-6xl font-black text-white">12</span>
+                    <span className="text-2xl font-bold text-[#00D4FF] mb-2">EUR</span>
+                    <span className="text-slate-400 mb-2">/ mes</span>
+                  </div>
+                  {eurToBs !== null && (
+                    <p className="text-slate-500 text-sm">
+                      ≈ Bs. {(12 * eurToBs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-slate-600">(tasa BCV)</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Features incluidos */}
+                <ul className="space-y-3 mb-8">
+                  {[
+                    'Clientes ilimitados',
+                    'Rutinas y planes nutricionales',
+                    'Progreso con fotos y medidas',
+                    'Notificaciones WhatsApp',
+                    'Exportacion PDF y Excel',
+                    'PWA instalable en iOS y Android',
+                    'Soporte directo por WhatsApp',
+                  ].map(item => (
+                    <li key={item} className="flex items-center gap-3 text-slate-300 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-[#00D4FF] flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    const msg = encodeURIComponent('Hola, me interesa AccesoGym Coach y quisiera solicitar acceso.')
+                    window.open(`https://wa.me/+584120557690?text=${msg}`, '_blank')
+                  }}
+                  className="w-full py-4 bg-gradient-to-r from-[#00D4FF] to-[#0EA5E9] rounded-2xl text-[#0B1426] font-bold text-lg shadow-2xl shadow-[#00D4FF]/30 hover:shadow-[#00D4FF]/50 transition-shadow flex items-center justify-center gap-2"
+                >
+                  <FaWhatsapp className="w-5 h-5" />
+                  Solicita acceso
+                </motion.button>
+
+                <p className="text-center text-xs text-slate-500 mt-4">
+                  Sin tarjeta de credito. Sin compromiso.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
