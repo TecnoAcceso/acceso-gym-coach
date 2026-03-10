@@ -17,9 +17,32 @@ interface PaymentModalProps {
 }
 
 const BANKS = [
-  'Banesco', 'Banco de Venezuela', 'Mercantil', 'Provincial (BBVA)',
-  'Banco Exterior', 'Bicentenario', 'BNC', 'Sofitasa', 'Banplus',
-  'Bancamiga', 'Otro',
+  '0102 - Banco de Venezuela',
+  '0104 - Banco Venezolano de Crédito',
+  '0105 - Banco Mercantil',
+  '0108 - Banco Provincial (BBVA)',
+  '0114 - Bancaribe',
+  '0115 - Banco Exterior',
+  '0128 - Banco Caroní',
+  '0134 - Banesco',
+  '0137 - Banco Sofitasa',
+  '0138 - Banco Plaza',
+  '0146 - Bangente',
+  '0151 - Banco Fondo Común (BFC)',
+  '0156 - 100% Banco',
+  '0157 - DelSur Banco Universal',
+  '0163 - Banco del Tesoro',
+  '0166 - Banco Agrícola de Venezuela',
+  '0168 - Bancrecer',
+  '0169 - Mi Banco',
+  '0171 - Banco Activo',
+  '0172 - Bancamiga',
+  '0173 - Banco Internacional de Desarrollo',
+  '0174 - Banplus',
+  '0175 - Banco Bicentenario',
+  '0177 - BANFANB',
+  '0191 - BNC / BOD',
+  '0601 - IMCP',
 ]
 
 export default function PaymentModal({ open, onClose }: PaymentModalProps) {
@@ -240,13 +263,13 @@ export default function PaymentModal({ open, onClose }: PaymentModalProps) {
                     {/* Referencia */}
                     <div>
                       <label className="block text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
-                        <Hash className="w-3.5 h-3.5" /> Numero de referencia
+                        <Hash className="w-3.5 h-3.5" /> Últimos 6 dígitos de la referencia
                       </label>
                       <input
                         type="text"
                         value={form.reference}
                         onChange={e => setForm(p => ({ ...p, reference: e.target.value }))}
-                        placeholder="Ej: 0012345678"
+                        placeholder="Ej: 345678"
                         className="w-full px-3 py-2.5 bg-[#1A2332]/60 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:border-[#00D4FF] focus:outline-none"
                       />
                     </div>
