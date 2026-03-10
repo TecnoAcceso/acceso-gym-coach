@@ -39,30 +39,27 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
           className="bg-dark-200 rounded-2xl border border-white/10 w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl"
         >
           {/* Header */}
-          <div className="relative bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
+          <div className="relative bg-gradient-to-r from-accent-primary to-accent-secondary px-4 py-3">
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">¡Novedades en AccesoGym Coach!</h2>
-                <p className="text-white/80 text-sm">Versión {CURRENT_VERSION}</p>
+                <h2 className="text-base font-bold text-white leading-tight">¡Novedades en AccesoGym Coach!</h2>
+                <p className="text-white/80 text-xs">Versión {CURRENT_VERSION} · Nuevas funcionalidades</p>
               </div>
             </div>
-            <p className="text-white/90 text-sm mt-2">
-              Hemos mejorado tu experiencia con nuevas funcionalidades y optimizaciones
-            </p>
           </div>
 
           {/* Content - Scrollable */}
-          <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)] space-y-4">
+          <div className="p-4 overflow-y-auto max-h-[calc(85vh-130px)] space-y-3">
 
             {/* Landing Page */}
             <motion.div

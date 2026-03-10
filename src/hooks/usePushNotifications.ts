@@ -23,8 +23,10 @@ export function usePushNotifications() {
     const subscribe = async () => {
       try {
         const reg = await navigator.serviceWorker.ready
+
+        // Forzar re-suscripción siempre para asegurar keys actualizadas
         const existing = await reg.pushManager.getSubscription()
-        if (existing) return // ya suscrito
+        if (existing) await existing.unsubscribe()
 
         const permission = await Notification.requestPermission()
         if (permission !== 'granted') return
