@@ -47,7 +47,7 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center space-x-2.5">
+            <div className="flex items-center space-x-2.5 pr-8">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
@@ -59,7 +59,7 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
           </div>
 
           {/* Content - Scrollable */}
-          <div className="p-4 overflow-y-auto max-h-[calc(85vh-130px)] space-y-3">
+          <div className="p-4 overflow-y-auto max-h-[calc(85vh-160px)] space-y-3">
 
             {/* Landing Page */}
             <motion.div
