@@ -59,6 +59,12 @@ export default {
       },
       backdropBlur: {
         xs: '2px',
+      },
+      height: {
+        screen: '100dvh',
+      },
+      minHeight: {
+        screen: '100dvh',
       }
     },
   },
