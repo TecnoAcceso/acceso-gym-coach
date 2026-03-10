@@ -6,6 +6,12 @@ declare const self: ServiceWorkerGlobalScope
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
+// Tomar control inmediatamente sin esperar que se cierren las pestañas
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 self.addEventListener('push', (event: PushEvent) => {
   if (!event.data) return
   const data = event.data.json()
