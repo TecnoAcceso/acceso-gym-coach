@@ -24,9 +24,15 @@ export function usePushNotifications() {
       try {
         const reg = await navigator.serviceWorker.ready
 
-        // Forzar re-suscripción siempre para asegurar keys actualizadas
         const existing = await reg.pushManager.getSubscription()
-        if (existing) await existing.unsubscribe()
+        if (existing) {
+          // Ya hay suscripción activa, solo actualizamos Supabase por si acaso
+          await supabase.from('push_subscriptions').upsert({
+            auth_user_id: user.id,
+            subscription: existing.toJSON(),
+          }, { onConflict: 'auth_user_id' })
+          return
+        }
 
         const permission = await Notification.requestPermission()
         if (permission !== 'granted') return

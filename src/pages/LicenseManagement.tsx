@@ -391,6 +391,20 @@ export default function LicenseManagement() {
         .update({ status: 'approved' })
         .eq('id', payment.id)
 
+      // Notificar al coach por push
+      if (payment.auth_user_id) {
+        const expiryFormatted = format(new Date(newExpiry), "d 'de' MMMM yyyy", { locale: es })
+        fetch('/api/notify-approval', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            coachAuthUserId: payment.auth_user_id,
+            coachName: payment.full_name || 'Coach',
+            expiryDate: expiryFormatted,
+          }),
+        }).catch(() => {})
+      }
+
       showToast('Licencia activada correctamente', 'success')
       fetchPayments()
     } catch (err: any) {
