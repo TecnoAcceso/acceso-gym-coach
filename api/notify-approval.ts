@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!subs || subs.length === 0) return res.status(200).json({ sent: 0 })
 
   const payload = JSON.stringify({
-    title: '✅ Licencia activada',
+    title: '✅ Licencia Activada ✅',
     body: `Hola ${coachName}, tu pago fue aprobado. Licencia activa hasta ${expiryDate}.`,
     url: '/dashboard',
   })

@@ -6,6 +6,10 @@
     {
       "path": "/api/notify-expired-clients",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/notify-license-expiring",
+      "schedule": "0 12 * * *"
     }
   ],
   "rewrites": [

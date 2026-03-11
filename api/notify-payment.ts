@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!subs || subs.length === 0) return res.status(200).json({ sent: 0 })
 
   const payload = JSON.stringify({
-    title: 'Nuevo comprobante de pago',
+    title: '💰 Pago Recibido 💰',
     body: `${coachName} envió un comprobante. Banco: ${bank}, Ref: ${reference}. Verifica en Gestión de Licencias.`,
     url: '/license-management',
   })
