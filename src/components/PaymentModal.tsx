@@ -86,6 +86,10 @@ export default function PaymentModal({ open, onClose }: PaymentModalProps) {
       setError('Completa todos los campos')
       return
     }
+    if (!/^\d{6}$/.test(form.reference)) {
+      setError('La referencia debe tener exactamente 6 dígitos numéricos')
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -266,9 +270,11 @@ export default function PaymentModal({ open, onClose }: PaymentModalProps) {
                         <Hash className="w-3.5 h-3.5" /> Últimos 6 dígitos de la referencia
                       </label>
                       <input
-                        type="text"
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={6}
                         value={form.reference}
-                        onChange={e => setForm(p => ({ ...p, reference: e.target.value }))}
+                        onChange={e => setForm(p => ({ ...p, reference: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
                         placeholder="Ej: 345678"
                         className="w-full px-3 py-2.5 bg-[#1A2332]/60 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:border-[#00D4FF] focus:outline-none"
                       />
