@@ -21,14 +21,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  // Buscar coaches cuya licencia vence mañana
-  const { data: profiles, error } = await supabase
-    .from('user_profiles')
-    .select('auth_user_id, full_name, license_expiry')
-    .eq('license_expiry', tomorrowStr)
-    .eq('role', 'trainer')
+  // Buscar licencias que vencen mañana con su trainer
+  const { data: licenses, error } = await supabase
+    .from('licenses')
+    .select('trainer_id, expiry_date')
+    .eq('expiry_date', tomorrowStr)
+    .eq('status', 'active')
 
   if (error) return res.status(500).json({ error: error.message })
+  if (!licenses || licenses.length === 0) return res.status(200).json({ sent: 0 })
+
+  // Obtener perfiles de esos trainers (trainer_id = user_profiles.id)
+  const trainerIds = licenses.map(l => l.trainer_id).filter(Boolean)
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('id, auth_user_id, full_name')
+    .in('id', trainerIds)
+
   if (!profiles || profiles.length === 0) return res.status(200).json({ sent: 0 })
 
   // Obtener suscripciones push de esos coaches
