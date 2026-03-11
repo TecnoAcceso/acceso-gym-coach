@@ -14,6 +14,7 @@ interface PaymentSettings {
 interface PaymentModalProps {
   open: boolean
   onClose: () => void
+  onSuccess?: () => void
 }
 
 const BANKS = [
@@ -45,7 +46,7 @@ const BANKS = [
   '0601 - IMCP',
 ]
 
-export default function PaymentModal({ open, onClose }: PaymentModalProps) {
+export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalProps) {
   const { user, userProfile } = useAuth()
   const [settings, setSettings] = useState<PaymentSettings | null>(null)
   const [eurToBs, setEurToBs] = useState<number | null>(null)
@@ -120,6 +121,7 @@ export default function PaymentModal({ open, onClose }: PaymentModalProps) {
       } catch { /* notificación no crítica */ }
 
       setSuccess(true)
+      onSuccess?.()
     } catch (err: any) {
       setError(err.message || 'Error al enviar el comprobante')
     } finally {

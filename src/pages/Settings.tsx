@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Toast, { ToastType } from '@/components/Toast'
+import PaymentModal from '@/components/PaymentModal'
 import { supabase } from '@/lib/supabase'
 import { exportClientsToExcel } from '@/utils/exportToExcel'
 import { useForm } from 'react-hook-form'
@@ -39,6 +40,7 @@ export default function Settings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -734,6 +736,19 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Botón renovar licencia — visible para todos los trainers */}
+        {user?.role === 'trainer' && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowPaymentModal(true)}
+            className="w-full mt-4 py-3 px-4 bg-gradient-to-r from-accent-primary/20 to-accent-secondary/20 border border-accent-primary/30 text-accent-primary font-medium rounded-lg hover:bg-accent-primary/30 transition-all duration-300 flex items-center justify-center space-x-2"
+          >
+            <CreditCard className="w-5 h-5" />
+            <span>Renovar Licencia</span>
+          </motion.button>
+        )}
+
         {/* Contact Info */}
         <div className="mt-6 p-4 bg-dark-200/30 rounded-lg border border-white/5">
           <p className="text-xs text-slate-400 leading-relaxed text-center">
@@ -824,6 +839,16 @@ export default function Settings() {
         message={toast.message}
         type={toast.type}
         onClose={() => setToast(prev => ({ ...prev, show: false }))}
+      />
+
+      {/* Modal de pago para renovar licencia */}
+      <PaymentModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={() => {
+          setShowPaymentModal(false)
+          showToast('Comprobante enviado. Espera la aprobación del administrador.', 'success')
+        }}
       />
     </div>
   )
