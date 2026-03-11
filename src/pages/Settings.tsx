@@ -749,17 +749,6 @@ export default function Settings() {
           </motion.button>
         )}
 
-        {/* Contact Info */}
-        <div className="mt-6 p-4 bg-dark-200/30 rounded-lg border border-white/5">
-          <p className="text-xs text-slate-400 leading-relaxed text-center">
-            Para renovar o actualizar tu licencia, contacta a
-            <span className="text-accent-primary font-medium"> TecnoAcceso</span>
-          </p>
-          <p className="text-xs text-slate-400 leading-relaxed text-center">
-            
-            <span className="text-accent-primary font-medium">0412-0557690 / 0412-7364393</span>
-          </p>
-        </div>
       </motion.div>
 
       {/* Backup Section */}
