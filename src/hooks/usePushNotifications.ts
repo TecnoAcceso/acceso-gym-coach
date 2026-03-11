@@ -3,6 +3,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string
+// Incrementar este valor en cada deploy para forzar re-suscripción
+const SW_VERSION = '3'
+const SW_VERSION_KEY = 'push-sw-version'
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -23,13 +26,21 @@ export function usePushNotifications() {
     const subscribe = async () => {
       try {
         const reg = await navigator.serviceWorker.ready
-
+        const storedVersion = localStorage.getItem(SW_VERSION_KEY)
         const existing = await reg.pushManager.getSubscription()
-        if (existing) {
-          // Ya hay suscripción activa, solo actualizamos Supabase por si acaso
+
+        // Si el SW cambió de versión, forzar re-suscripción
+        if (storedVersion !== SW_VERSION && existing) {
+          await existing.unsubscribe()
+        }
+
+        const currentSub = storedVersion !== SW_VERSION ? null : existing
+
+        if (currentSub) {
+          // Suscripción vigente y SW no cambió: solo sincronizar con Supabase
           await supabase.from('push_subscriptions').upsert({
             auth_user_id: user.id,
-            subscription: existing.toJSON(),
+            subscription: currentSub.toJSON(),
           }, { onConflict: 'auth_user_id' })
           return
         }
@@ -46,6 +57,8 @@ export function usePushNotifications() {
           auth_user_id: user.id,
           subscription: subscription.toJSON(),
         }, { onConflict: 'auth_user_id' })
+
+        localStorage.setItem(SW_VERSION_KEY, SW_VERSION)
       } catch (err) {
         console.error('Push subscription error:', err)
       }
