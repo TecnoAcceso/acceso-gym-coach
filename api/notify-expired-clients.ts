@@ -22,12 +22,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Obtener clientes vencidos hoy agrupados por trainer_id
   const { data: clients, error } = await supabase
     .from('clients')
-    .select('full_name, trainer_id, end_date, status')
-    .eq('status', 'expired')
+    .select('full_name, trainer_id, end_date')
     .eq('end_date', today)
 
   if (error) return res.status(500).json({ error: error.message })
-  if (!clients || clients.length === 0) return res.status(200).json({ sent: 0 })
+  if (!clients || clients.length === 0) return res.status(200).json({ sent: 0, debug_today: today, debug_clients_found: 0 })
 
   // Agrupar por trainer_id
   const byTrainer: Record<string, string[]> = {}
