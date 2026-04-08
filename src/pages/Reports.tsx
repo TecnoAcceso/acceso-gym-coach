@@ -146,8 +146,8 @@ export default function Reports() {
             delay={0.2}
           />
           <StatsCard
-            title={`vs mes anterior`}
-            value={Math.abs(trend)}
+            title="Mes anterior"
+            value={totalRenewalsLastMonth}
             icon={trend >= 0 ? TrendingUp : XCircle}
             color={trend >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'}
             delay={0.25}
