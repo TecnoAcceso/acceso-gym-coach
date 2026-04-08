@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sparkles, CheckCircle } from 'lucide-react'
+import { X, Sparkles, CheckCircle, BarChart2, Bell, Layout } from 'lucide-react'
 
-const CURRENT_VERSION = '2.1.0'
+const CURRENT_VERSION = '2.2.0'
 const STORAGE_KEY = 'whats-new-seen-version'
 
 interface WhatsNewModalProps {
@@ -13,7 +13,6 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
-    // Verificar si ya vio esta versión
     const seenVersion = localStorage.getItem(STORAGE_KEY)
     if (seenVersion !== CURRENT_VERSION) {
       setShow(true)
@@ -46,7 +45,6 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
             >
               <X className="w-4 h-4" />
             </button>
-
             <div className="flex items-center space-x-2.5 pr-8">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-white" />
@@ -58,10 +56,10 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
             </div>
           </div>
 
-          {/* Content - Scrollable */}
+          {/* Content */}
           <div className="p-4 overflow-y-auto max-h-[calc(85vh-160px)] space-y-3">
 
-            {/* Landing Page */}
+            {/* Notificaciones Push */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -69,37 +67,33 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4 border-2 border-accent-primary/50"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#0EA5E9] rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    Landing Page publica
+                    Notificaciones Push
                     <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">NUEVO</span>
                   </h3>
                   <ul className="space-y-1.5 text-sm text-slate-400">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Pagina de presentacion de la app accesible sin iniciar sesion</span>
+                      <span>Aviso diario a las 8AM cuando un cliente tiene la membresía vencida ese día</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Preview interactivo del dashboard con diseño identico a la app real</span>
+                      <span>Notificación cuando el administrador aprueba tu pago de licencia</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Carrusel de coaches reales conectado a la base de datos</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Seccion de funcionalidades, ventajas y CTA</span>
+                      <span>Aviso 1 día antes de que tu licencia venza para que puedas renovar a tiempo</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </motion.div>
 
-            {/* Foto de perfil del coach */}
+            {/* Reportes */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -107,33 +101,33 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4 border-2 border-accent-primary/50"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BarChart2 className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    Foto de perfil del Coach
+                    Reportes y estadísticas
                     <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">NUEVO</span>
                   </h3>
                   <ul className="space-y-1.5 text-sm text-slate-400">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Sube tu foto de perfil desde Configuracion para aparecer en el Landing</span>
+                      <span>Gráfica de renovaciones por mes (últimos 6 meses)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Tu foto se muestra en el carrusel publico de coaches</span>
+                      <span>Estado actual de clientes en gráfica tipo dona</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Formato JPG/PNG, maximo 2MB</span>
+                      <span>Tasa de retención mensual — cuántos clientes renuevan vs se van</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </motion.div>
 
-            {/* Rediseno UI */}
+            {/* Mejoras UI */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -141,34 +135,26 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4 border-2 border-accent-primary/50"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Layout className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    Rediseno visual de la interfaz
-                    <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">NUEVO</span>
+                    Mejoras de interfaz
+                    <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">MEJORADO</span>
                   </h3>
                   <ul className="space-y-1.5 text-sm text-slate-400">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Nuevo sistema de navegacion animado con indicador de posicion</span>
+                      <span>Todas las pantallas con header uniforme: logo + título centrado</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Tarjetas de clientes y estadisticas con efecto glow y gradientes modernos</span>
+                      <span>Renovar licencia disponible en Configuración sin esperar a que venza</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Toast de notificaciones centrado y con animacion tipo Sileo</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Vista de Rutinas con layout compacto y mejorado</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Boton volver en Login con icono circular acorde al estilo</span>
+                      <span>Campo de referencia de pago ahora solo acepta 6 dígitos numéricos</span>
                     </li>
                   </ul>
                 </div>

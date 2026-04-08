@@ -1,14 +1,13 @@
 import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, Settings, UtensilsCrossed } from 'lucide-react'
-import { BsPersonFillAdd } from 'react-icons/bs'
+import { Home, Settings, UtensilsCrossed, BarChart2 } from 'lucide-react'
 import { GiWeightLiftingUp } from 'react-icons/gi'
 
 const navItems = [
   { to: '/dashboard', icon: Home, label: 'Inicio' },
-  { to: '/clients/new', icon: BsPersonFillAdd, label: 'Nuevo' },
   { to: '/routines', icon: GiWeightLiftingUp, label: 'Rutinas' },
   { to: '/nutrition-plans', icon: UtensilsCrossed, label: 'Nutrición' },
+  { to: '/reports', icon: BarChart2, label: 'Reportes' },
   { to: '/settings', icon: Settings, label: 'Config' },
 ]
 
@@ -29,10 +28,13 @@ export default function Navigation() {
     if (pathname.includes('/clients/')) return 0
 
     // Si estás en rutas de rutinas, resaltar "Rutinas"
-    if (pathname.includes('/routine')) return 2
+    if (pathname.includes('/routine')) return 1
 
-    // Si estás en rutas de nutrición, resaltar "Nutrición"  
-    if (pathname.includes('/nutrition')) return 3
+    // Si estás en rutas de nutrición, resaltar "Nutrición"
+    if (pathname.includes('/nutrition')) return 2
+
+    // Si estás en reportes
+    if (pathname.includes('/reports')) return 3
 
     // Default: resaltar "Inicio"
     return 0

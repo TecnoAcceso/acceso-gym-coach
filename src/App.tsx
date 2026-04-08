@@ -13,6 +13,7 @@ import Routines from '@/pages/Routines'
 import NutritionPlanTemplates from '@/pages/NutritionPlanTemplates'
 import NewNutritionPlan from '@/pages/NewNutritionPlan'
 import ViewNutritionPlan from '@/pages/ViewNutritionPlan'
+import Reports from '@/pages/Reports'
 import Layout from '@/components/Layout'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import LicenseExpired from '@/components/LicenseExpired'
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="nutrition-plans/new" element={<NewNutritionPlan />} />
         <Route path="nutrition-plans/:planId" element={<ViewNutritionPlan />} />
         <Route path="nutrition-plans/:planId/edit" element={<NewNutritionPlan />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
         <Route path="license-management" element={<LicenseManagement />} />
       </Route>

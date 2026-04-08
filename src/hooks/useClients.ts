@@ -300,6 +300,16 @@ export function useClients() {
         status: calculateClientStatus(data.end_date)
       }
 
+      // Registrar renovación en historial
+      await supabase.from('client_renewals').insert({
+        client_id: id,
+        trainer_id: user.id,
+        client_name: data.full_name,
+        start_date: newStartDate,
+        end_date: newEndDate,
+        duration_months: durationMonths,
+      })
+
       setClients(prev => prev.map(c => c.id === id ? clientWithStatus : c))
       console.log('✅ Cliente renovado exitosamente')
       return clientWithStatus

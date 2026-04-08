@@ -437,6 +437,7 @@ _Powered by TecnoAcceso / ElectroShop_`
     if (!startM || !endM) return
 
     try {
+      const trainerName = user?.full_name || 'Tu entrenador'
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
@@ -447,13 +448,13 @@ _Powered by TecnoAcceso / ElectroShop_`
       pdf.rect(0, 0, pageWidth, 40, 'F')
 
       pdf.setTextColor(255, 255, 255)
-      pdf.setFontSize(24)
+      pdf.setFontSize(14)
       pdf.setFont('helvetica', 'bold')
-      pdf.text('AccesoGym Coach', pageWidth / 2, 15, { align: 'center' })
+      pdf.text(`Coach: ${trainerName}`, pageWidth / 2, 13, { align: 'center' })
 
       pdf.setFontSize(16)
       pdf.setFont('helvetica', 'normal')
-      pdf.text('Comparación de Avances', pageWidth / 2, 27, { align: 'center' })
+      pdf.text('Comparación de Avances', pageWidth / 2, 24, { align: 'center' })
 
       // Información del cliente
       pdf.setTextColor(100, 116, 139) // slate-500
@@ -536,9 +537,12 @@ _Powered by TecnoAcceso / ElectroShop_`
       pdf.text(
         `Generado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`,
         pageWidth / 2,
-        pageHeight - 10,
+        pageHeight - 14,
         { align: 'center' }
       )
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(0, 212, 255)
+      pdf.text('AccesoGym Coach', pageWidth / 2, pageHeight - 7, { align: 'center' })
 
       // PÁGINA 2: COMPARACIÓN DE FOTOS (si hay fotos)
       if (startPhotos.length > 0 || endPhotos.length > 0) {

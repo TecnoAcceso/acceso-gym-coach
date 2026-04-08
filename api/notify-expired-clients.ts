@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : `${count} clientes tienen la membresía vencida hoy: ${names.slice(0, 3).join(', ')}${count > 3 ? '...' : ''}.`
 
       return webpush.sendNotification(subscription, JSON.stringify({
-        title: count === 1 ? '⚠️ Membresía vencida' : `⚠️ ${count} membresías vencidas`,
+        title: count === 1 ? '⚠️ Membresía Vencida ⚠️' : `⚠️ ${count} Membresías Vencidas ⚠️`,
         body,
         url: '/dashboard',
       }))
