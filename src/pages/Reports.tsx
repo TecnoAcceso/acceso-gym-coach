@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useClients } from '@/hooks/useClients'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, LineChart, Line, CartesianGrid
+  PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts'
 import { BarChart2, Users, RefreshCcw, TrendingUp, AlertTriangle, XCircle } from 'lucide-react'
 import StatsCard from '@/components/StatsCard'
@@ -62,17 +62,19 @@ export default function Reports() {
     { name: 'Vencidos', value: expiredCount },
   ].filter(d => d.value > 0)
 
-  // Tasa de retención por mes
+  // Tasa de retención por mes — renovaciones ese mes / clientes que vencieron ese mes, máx 100%
   const retentionData = Array.from({ length: 6 }, (_, i) => {
     const date = subMonths(new Date(), 5 - i)
     const label = format(date, 'MMM', { locale: es })
+    const startStr = format(startOfMonth(date), 'yyyy-MM-dd')
+    const endStr = format(endOfMonth(date), 'yyyy-MM-dd')
     const start = startOfMonth(date).toISOString()
     const end = endOfMonth(date).toISOString()
     // Clientes que vencieron ese mes
-    const expired = clients.filter(c => c.end_date >= start.split('T')[0] && c.end_date <= end.split('T')[0]).length
+    const expired = clients.filter(c => c.end_date >= startStr && c.end_date <= endStr).length
     // Renovaciones registradas ese mes
     const renewed = renewals.filter(r => r.created_at >= start && r.created_at <= end).length
-    const rate = expired > 0 ? Math.round((renewed / expired) * 100) : 0
+    const rate = expired > 0 ? Math.min(100, Math.round((renewed / expired) * 100)) : 0
     return { month: label.charAt(0).toUpperCase() + label.slice(1), rate, renewed, expired }
   })
 
@@ -199,13 +201,9 @@ export default function Reports() {
             <div className="flex items-center gap-4">
               <ResponsiveContainer width="50%" height={150}>
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" strokeWidth={0}
-                    fill="#22C55E"
-                  >
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" strokeWidth={0}>
                     {pieData.map((_, index) => (
-                      <g key={index}>
-                        <rect fill={COLORS[index]} />
-                      </g>
+                      <Cell key={index} fill={COLORS[index]} />
                     ))}
                   </Pie>
                   <Tooltip
