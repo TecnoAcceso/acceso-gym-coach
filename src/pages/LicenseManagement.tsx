@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase'
 import Toast, { ToastType } from '@/components/Toast'
 import UserManagement from '@/components/UserManagement'
 import {
-  ArrowLeft,
   Shield,
   ShieldCheck,
   ShieldX,
@@ -23,7 +22,6 @@ import {
   RefreshCw,
   CreditCard,
   CheckCircle2,
-  Clock,
   Ban,
 } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
@@ -514,13 +512,22 @@ export default function LicenseManagement() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between"
       >
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/settings')}
-            className="p-2 rounded-lg bg-dark-200/50 border border-white/10 text-slate-400 hover:text-accent-primary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        <div className="flex items-center space-x-3">
+          <div className="w-14 h-14 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-14 h-14 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) { fallback.style.display = 'flex'; fallback.classList.remove('hidden') }
+              }}
+            />
+            <div className="hidden w-14 h-14 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full items-center justify-center">
+              <Shield className="w-7 h-7 text-white" />
+            </div>
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-white">Usuarios y Licencias</h1>
           </div>

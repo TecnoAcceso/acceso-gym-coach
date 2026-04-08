@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
 import { useClients } from '@/hooks/useClients'
-import { ArrowLeft, Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2, CreditCard, Save } from 'lucide-react'
+import { Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2, CreditCard, Save } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -383,17 +383,30 @@ export default function Settings() {
   return (
     <div className="p-4 pb-20 max-w-md mx-auto space-y-6">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center space-x-4 mb-6"
+        className="flex items-center justify-between mb-6"
       >
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="p-2 rounded-lg bg-dark-200/50 border border-white/10 text-slate-400 hover:text-accent-primary transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl font-semibold text-white">Configuración</h1>
+        <div className="w-14 h-14 flex items-center justify-center">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="w-14 h-14 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement
+              if (fallback) { fallback.style.display = 'flex'; fallback.classList.remove('hidden') }
+            }}
+          />
+          <div className="hidden w-14 h-14 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full items-center justify-center">
+            <SettingsIcon className="w-7 h-7 text-white" />
+          </div>
+        </div>
+        <div className="flex-1 text-center">
+          <h1 className="text-2xl font-bold text-white">Configuración</h1>
+          <p className="text-sm text-slate-400">Ajustes de tu cuenta</p>
+        </div>
+        <div className="w-14" />
       </motion.div>
 
       {/* User Profile Section */}

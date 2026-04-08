@@ -6,7 +6,7 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import RoutineModal from '@/components/RoutineModal'
 import ExerciseManager from '@/components/ExerciseManager'
 import ConfirmDialog from '@/components/ConfirmDialog'
-import { Search, Edit, Trash2, ListOrdered, ArrowLeft } from 'lucide-react'
+import { Search, Edit, Trash2, ListOrdered } from 'lucide-react'
 import { GiWeightLiftingUp } from 'react-icons/gi'
 import { MdAddCircleOutline } from 'react-icons/md'
 import type { RoutineTemplate, RoutineCategory } from '@/types/routine'
@@ -108,17 +108,27 @@ export default function Routines() {
         className="sticky top-0 z-20 bg-dark-300/80 backdrop-blur-lg border-b border-white/10 p-4"
       >
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 rounded-lg bg-dark-200/50 border border-white/10 text-slate-400 hover:text-accent-primary transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl font-semibold text-white">Rutinas</h1>
+          <div className="w-14 h-14 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-14 h-14 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) { fallback.style.display = 'flex'; fallback.classList.remove('hidden') }
+              }}
+            />
+            <div className="hidden w-14 h-14 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full items-center justify-center">
+              <GiWeightLiftingUp className="w-7 h-7 text-white" />
+            </div>
           </div>
 
-          {/* Add Button */}
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-white">Rutinas</h1>
+            <p className="text-sm text-slate-400">Plantillas de entrenamiento</p>
+          </div>
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -129,33 +139,33 @@ export default function Routines() {
           </motion.button>
         </div>
 
-        {/* Search and Filter */}
-        <div className="flex space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar rutina..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
-            />
-          </div>
-
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value as any)}
-            className="px-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
-          >
-            <option value="all">Todas</option>
-            <option value="hipertrofia">Hipertrofia</option>
-            <option value="fuerza">Fuerza</option>
-            <option value="resistencia">Resistencia</option>
-            <option value="perdida_peso">Pérdida de Peso</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
       </motion.div>
+
+      {/* Search and Filter */}
+      <div className="p-4 pb-0 flex space-x-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar rutina..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
+          />
+        </div>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value as any)}
+          className="px-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
+        >
+          <option value="all">Todas</option>
+          <option value="hipertrofia">Hipertrofia</option>
+          <option value="fuerza">Fuerza</option>
+          <option value="resistencia">Resistencia</option>
+          <option value="perdida_peso">Pérdida de Peso</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
 
       {/* Content */}
       <div className="p-4 space-y-4">

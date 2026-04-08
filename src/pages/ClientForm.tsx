@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import Toast, { ToastType } from '@/components/Toast'
 import PhotoPickerModal from '@/components/PhotoPickerModal'
-import { ArrowLeft, Save, User, Phone, Clock, Weight, Ruler, Activity, ChevronDown, ChevronUp, X, Image as ImageIcon } from 'lucide-react'
+import { Save, User, Phone, Clock, Weight, Ruler, Activity, ChevronDown, ChevronUp, X, Image as ImageIcon } from 'lucide-react'
 
 const clientSchema = z.object({
   document_type: z.enum(['V', 'E'], { required_error: 'Selecciona el tipo de documento' }),
@@ -376,16 +376,29 @@ export default function ClientFormPage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
-        <div className="flex items-center space-x-4 mb-6">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-lg bg-dark-200/50 border border-white/10 text-slate-400 hover:text-accent-primary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-semibold text-white">
-            {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
-          </h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="w-14 h-14 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-14 h-14 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) { fallback.style.display = 'flex'; fallback.classList.remove('hidden') }
+              }}
+            />
+            <div className="hidden w-14 h-14 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full items-center justify-center">
+              <User className="w-7 h-7 text-white" />
+            </div>
+          </div>
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-white">
+              {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
+            </h1>
+            <p className="text-sm text-slate-400">{isEditing ? 'Modifica los datos del cliente' : 'Agrega un nuevo cliente'}</p>
+          </div>
+          <div className="w-14" />
         </div>
 
         <div className="glass-card p-6">

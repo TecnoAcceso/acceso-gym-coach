@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useNutritionPlans } from '@/hooks/useNutritionPlans'
-import { UtensilsCrossed, Search, Edit, Trash2, ArrowLeft } from 'lucide-react'
+import { UtensilsCrossed, Search, Edit, Trash2 } from 'lucide-react'
 import { MdAddCircleOutline } from 'react-icons/md'
 import { CgCopy } from 'react-icons/cg'
 import type { NutritionPlanTemplate } from '@/types/nutrition'
@@ -55,17 +55,27 @@ export default function NutritionPlanTemplates() {
         className="sticky top-0 z-20 bg-dark-300/80 backdrop-blur-lg border-b border-white/10 p-4"
       >
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 rounded-lg bg-dark-200/50 border border-white/10 text-slate-400 hover:text-accent-primary transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl font-semibold text-white">Planes Alimenticios</h1>
+          <div className="w-14 h-14 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-14 h-14 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) { fallback.style.display = 'flex'; fallback.classList.remove('hidden') }
+              }}
+            />
+            <div className="hidden w-14 h-14 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full items-center justify-center">
+              <UtensilsCrossed className="w-7 h-7 text-white" />
+            </div>
           </div>
 
-          {/* Add Button */}
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-white">Planes Alimenticios</h1>
+            <p className="text-sm text-slate-400">Plantillas nutricionales</p>
+          </div>
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -76,7 +86,10 @@ export default function NutritionPlanTemplates() {
           </motion.button>
         </div>
 
-        {/* Search Bar */}
+      </motion.div>
+
+      {/* Search Bar */}
+      <div className="p-4 pb-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
@@ -87,7 +100,7 @@ export default function NutritionPlanTemplates() {
             className="w-full pl-10 pr-4 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
           />
         </div>
-      </motion.div>
+      </div>
 
       {/* Content */}
       <div className="p-4 space-y-4">

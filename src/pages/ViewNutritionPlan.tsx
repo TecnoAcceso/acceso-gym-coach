@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useNutritionPlans } from '@/hooks/useNutritionPlans'
 import {
-  ArrowLeft,
   Edit,
   Trash2,
   Clock,
@@ -123,13 +122,22 @@ export default function ViewNutritionPlan() {
         animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-20 bg-dark-300/80 backdrop-blur-lg border-b border-white/10 p-4"
       >
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/nutrition-plans')}
-            className="p-2 rounded-lg bg-dark-200/50 border border-white/10 text-slate-400 hover:text-accent-primary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        <div className="flex items-center space-x-3">
+          <div className="w-14 h-14 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-14 h-14 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) { fallback.style.display = 'flex'; fallback.classList.remove('hidden') }
+              }}
+            />
+            <div className="hidden w-14 h-14 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full items-center justify-center">
+              <UtensilsCrossed className="w-7 h-7 text-white" />
+            </div>
+          </div>
           <h1 className="text-xl font-semibold text-white">{plan.name}</h1>
         </div>
       </motion.div>
