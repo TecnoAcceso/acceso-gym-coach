@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { Plus, Edit, Trash2, User, Shield, Key, X } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -32,11 +32,12 @@ const userSchema = z.object({
 type UserForm = z.infer<typeof userSchema>
 
 interface UserManagementProps {
-  onClose: () => void
+  onClose?: () => void
   onRefresh?: () => void
+  inline?: boolean
 }
 
-export default function UserManagement({ onClose, onRefresh }: UserManagementProps) {
+export default function UserManagement({ onClose, onRefresh, inline = false }: UserManagementProps) {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -113,13 +114,21 @@ export default function UserManagement({ onClose, onRefresh }: UserManagementPro
         new_full_name: userData.full_name,
         new_role: userData.role,
         new_phone: userData.phone || null,
-        new_password: userData.password || null // Solo se actualiza si se proporciona
+        new_password: userData.password || null
       })
 
       if (error) throw error
 
       if (!data.success) {
         throw new Error(`Error actualizando usuario: ${data.error}`)
+      }
+
+      // Si cambió el username, actualizar el email en auth.users via Admin API
+      if (userData.username !== editingUser.username && supabaseAdmin) {
+        const newEmail = userData.username === 'admin'
+          ? 'tecnoacceso2025@gmail.com'
+          : `${userData.username}@gmail.com`
+        await supabaseAdmin.auth.admin.updateUserById(editingUser.auth_user_id, { email: newEmail })
       }
 
       await fetchUsers()
@@ -202,25 +211,21 @@ export default function UserManagement({ onClose, onRefresh }: UserManagementPro
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-dark-300 rounded-xl border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden"
-      >
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-xl font-semibold text-white">Gestión de Usuarios</h2>
-          <div className="flex space-x-2">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowForm(true)}
-              className="px-3 py-1.5 bg-gradient-to-r from-accent-primary to-accent-secondary text-white text-sm rounded-md hover:shadow-md hover:shadow-accent-primary/30 transition-all duration-200 flex items-center space-x-1.5"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nuevo Usuario</span>
-            </motion.button>
+  const content = (
+    <>
+      <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <h2 className="text-xl font-semibold text-white">{inline ? 'Usuarios' : 'Gestión de Usuarios'}</h2>
+        <div className="flex space-x-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowForm(true)}
+            className="px-3 py-1.5 bg-gradient-to-r from-accent-primary to-accent-secondary text-white text-sm rounded-md hover:shadow-md hover:shadow-accent-primary/30 transition-all duration-200 flex items-center space-x-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nuevo Usuario</span>
+          </motion.button>
+          {!inline && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -230,197 +235,147 @@ export default function UserManagement({ onClose, onRefresh }: UserManagementPro
               <X className="w-3.5 h-3.5" />
               <span>Cerrar</span>
             </motion.button>
+          )}
+        </div>
+      </div>
+
+      <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+            {error}
           </div>
-        </div>
+        )}
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-              {error}
-            </div>
-          )}
+        {/* Formulario */}
+        {showForm && (
+          <motion.div
+            ref={formRef}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-dark-200/50 rounded-lg border border-white/10"
+          >
+            <h3 className="text-lg font-medium text-white mb-4">
+              {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
+            </h3>
 
-          {/* Formulario */}
-          {showForm && (
-            <motion.div
-              ref={formRef}
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-dark-200/50 rounded-lg border border-white/10"
-            >
-              <h3 className="text-lg font-medium text-white mb-4">
-                {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
-              </h3>
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                <input {...register('email')} type="email"
+                  className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white" />
+                {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>}
+              </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Email
-                  </label>
-                  <input
-                    {...register('email')}
-                    type="email"
-                    disabled={!!editingUser}
-                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white disabled:opacity-50"
-                  />
-                  {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  {editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+                </label>
+                <input {...register('password')} type="password"
+                  className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white" />
+                {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
+                <input {...register('username')} type="text"
+                  className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white" />
+                {errors.username && <p className="text-red-400 text-sm mt-1">{errors.username.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Nombre Completo</label>
+                <input {...register('full_name')} type="text"
+                  className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white" />
+                {errors.full_name && <p className="text-red-400 text-sm mt-1">{errors.full_name.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Teléfono (Opcional)</label>
+                <input {...register('phone')} type="tel" placeholder="+584123456789"
+                  onInput={(e) => {
+                    let value = e.currentTarget.value
+                    if (!value.startsWith('+')) value = '+' + value.replace(/[^0-9]/g, '')
+                    else value = '+' + value.slice(1).replace(/[^0-9]/g, '')
+                    e.currentTarget.value = value
+                  }}
+                  className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white" />
+                {errors.phone && <p className="text-red-400 text-sm mt-1">{errors.phone.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Rol</label>
+                <select {...register('role')} className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white">
+                  <option value="trainer">Entrenador</option>
+                  <option value="admin">Administrador</option>
+                  <option value="superuser">Superusuario</option>
+                </select>
+                {errors.role && <p className="text-red-400 text-sm mt-1">{errors.role.message}</p>}
+              </div>
+
+              <div className="md:col-span-2 flex space-x-3">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="button"
+                  onClick={() => { setShowForm(false); setEditingUser(null); reset() }}
+                  className="flex-1 py-3 px-4 bg-dark-200/50 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-dark-200/70 transition-all duration-300">
+                  Cancelar
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isSubmitting}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-accent-primary to-accent-secondary text-white font-medium rounded-lg hover:shadow-lg hover:shadow-accent-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? 'Guardando...' : editingUser ? 'Actualizar Usuario' : 'Crear Usuario'}
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+
+        {/* Lista de usuarios */}
+        {loading ? (
+          <div className="text-center py-8 text-slate-400">Cargando usuarios...</div>
+        ) : (
+          <div className="space-y-3">
+            {users.map((user) => (
+              <motion.div key={user.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="p-4 bg-dark-200/30 rounded-lg border border-white/5 flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className={`p-2 rounded-lg ${getRoleColor(user.role)}`}>
+                    {getRoleIcon(user.role)}
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-white">{user.full_name}</h4>
+                    <p className="text-sm text-slate-400">@{user.username} • {user.email}</p>
+                    {user.phone && <p className="text-sm text-slate-500">📱 {user.phone}</p>}
+                    <span className={`inline-block px-2 py-1 rounded text-xs ${getRoleColor(user.role)}`}>{user.role}</span>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    {editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
-                  </label>
-                  <input
-                    {...register('password')}
-                    type="password"
-                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white"
-                  />
-                  {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Username
-                  </label>
-                  <input
-                    {...register('username')}
-                    type="text"
-                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white"
-                  />
-                  {errors.username && <p className="text-red-400 text-sm mt-1">{errors.username.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Nombre Completo
-                  </label>
-                  <input
-                    {...register('full_name')}
-                    type="text"
-                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white"
-                  />
-                  {errors.full_name && <p className="text-red-400 text-sm mt-1">{errors.full_name.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Teléfono (Opcional)
-                  </label>
-                  <input
-                    {...register('phone')}
-                    type="tel"
-                    placeholder="+584123456789"
-                    onInput={(e) => {
-                      // Asegurar que comience con + y solo contenga números después
-                      let value = e.currentTarget.value
-                      if (!value.startsWith('+')) {
-                        value = '+' + value.replace(/[^0-9]/g, '')
-                      } else {
-                        value = '+' + value.slice(1).replace(/[^0-9]/g, '')
-                      }
-                      e.currentTarget.value = value
-                    }}
-                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white"
-                  />
-                  {errors.phone && <p className="text-red-400 text-sm mt-1">{errors.phone.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Rol
-                  </label>
-                  <select
-                    {...register('role')}
-                    className="w-full px-3 py-2 bg-dark-200 border border-white/10 rounded-lg text-white"
-                  >
-                    <option value="trainer">Entrenador</option>
-                    <option value="admin">Administrador</option>
-                    <option value="superuser">Superusuario</option>
-                  </select>
-                  {errors.role && <p className="text-red-400 text-sm mt-1">{errors.role.message}</p>}
-                </div>
-
-                <div className="md:col-span-2 flex space-x-3">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="button"
-                    onClick={() => {
-                      setShowForm(false)
-                      setEditingUser(null)
-                      reset()
-                    }}
-                    className="flex-1 py-3 px-4 bg-dark-200/50 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-dark-200/70 transition-all duration-300"
-                  >
-                    Cancelar
+                <div className="flex space-x-2">
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    onClick={() => handleEdit(user)}
+                    className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all duration-200">
+                    <Edit className="w-4 h-4" />
                   </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 py-3 px-4 bg-gradient-to-r from-accent-primary to-accent-secondary text-white font-medium rounded-lg hover:shadow-lg hover:shadow-accent-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? 'Guardando...' : editingUser ? 'Actualizar Usuario' : 'Crear Usuario'}
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    onClick={() => deleteUser(user.id, user.auth_user_id)}
+                    className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all duration-200">
+                    <Trash2 className="w-4 h-4" />
                   </motion.button>
                 </div>
-              </form>
-            </motion.div>
-          )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
 
-          {/* Lista de usuarios */}
-          {loading ? (
-            <div className="text-center py-8 text-slate-400">Cargando usuarios...</div>
-          ) : (
-            <div className="space-y-3">
-              {users.map((user) => (
-                <motion.div
-                  key={user.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="p-4 bg-dark-200/30 rounded-lg border border-white/5 flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-2 rounded-lg ${getRoleColor(user.role)}`}>
-                      {getRoleIcon(user.role)}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-white">{user.full_name}</h4>
-                      <p className="text-sm text-slate-400">@{user.username} • {user.email}</p>
-                      {user.phone && (
-                        <p className="text-sm text-slate-500">📱 {user.phone}</p>
-                      )}
-                      <span className={`inline-block px-2 py-1 rounded text-xs ${getRoleColor(user.role)}`}>
-                        {user.role}
-                      </span>
-                    </div>
-                  </div>
+  if (inline) {
+    return <div className="bg-dark-300 rounded-xl border border-white/10 overflow-hidden">{content}</div>
+  }
 
-                  <div className="flex space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleEdit(user)}
-                      className="p-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-all duration-200"
-                      title="Editar usuario"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => deleteUser(user.id, user.auth_user_id)}
-                      className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/30 transition-all duration-200"
-                      title="Eliminar usuario"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="bg-dark-300 rounded-xl border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        {content}
       </motion.div>
     </div>
   )

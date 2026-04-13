@@ -176,9 +176,11 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   user_auth_id uuid;
+  current_username text;
+  new_email text;
 BEGIN
-  -- Obtener el auth_user_id del perfil
-  SELECT auth_user_id INTO user_auth_id
+  -- Obtener el auth_user_id y username actual del perfil
+  SELECT auth_user_id, username INTO user_auth_id, current_username
   FROM user_profiles
   WHERE id = profile_id;
 
@@ -190,6 +192,21 @@ BEGIN
     role = new_role,
     phone = new_phone
   WHERE id = profile_id;
+
+  -- Si cambió el username, actualizar el email en auth.users
+  IF current_username IS DISTINCT FROM new_username THEN
+    IF new_username = 'admin' THEN
+      new_email := 'tecnoacceso2025@gmail.com';
+    ELSE
+      new_email := new_username || '@gmail.com';
+    END IF;
+
+    UPDATE auth.users
+    SET
+      email = new_email,
+      updated_at = NOW()
+    WHERE id = user_auth_id;
+  END IF;
 
   -- Si se proporciona nueva contraseña, actualizarla en auth.users
   IF new_password IS NOT NULL AND new_password != '' THEN
