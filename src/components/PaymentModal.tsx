@@ -50,7 +50,7 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
   const { user, userProfile } = useAuth()
   const [settings, setSettings] = useState<PaymentSettings | null>(null)
   const [eurToBs, setEurToBs] = useState<number | null>(null)
-  const [form, setForm] = useState({ bank: '', reference: '', payment_date: '' })
+  const [form, setForm] = useState({ bank: '', reference: '', payment_date: '', amount_bs: '' })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -83,7 +83,7 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.bank || !form.reference || !form.payment_date) {
+    if (!form.bank || !form.reference || !form.payment_date || !form.amount_bs) {
       setError('Completa todos los campos')
       return
     }
@@ -103,6 +103,7 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
         bank: form.bank,
         reference: form.reference,
         payment_date: form.payment_date,
+        amount_bs: parseFloat(form.amount_bs),
         status: 'pending',
       })
       if (insertError) throw insertError
@@ -132,7 +133,7 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
   const handleClose = () => {
     setSuccess(false)
     setError('')
-    setForm({ bank: '', reference: '', payment_date: '' })
+    setForm({ bank: '', reference: '', payment_date: '', amount_bs: '' })
     onClose()
   }
 
@@ -293,6 +294,21 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
                         onChange={e => setForm(p => ({ ...p, payment_date: e.target.value }))}
                         max={new Date().toISOString().split('T')[0]}
                         className="w-full px-3 py-2.5 bg-[#1A2332]/60 border border-white/10 rounded-xl text-white text-sm focus:border-[#00D4FF] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Monto transferido */}
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5" /> Monto transferido (Bs.)
+                      </label>
+                      <input
+                        type="tel"
+                        inputMode="decimal"
+                        value={form.amount_bs}
+                        onChange={e => setForm(p => ({ ...p, amount_bs: e.target.value.replace(/[^0-9.]/g, '') }))}
+                        placeholder="Ej: 450.00"
+                        className="w-full px-3 py-2.5 bg-[#1A2332]/60 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:border-[#00D4FF] focus:outline-none"
                       />
                     </div>
 

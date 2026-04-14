@@ -27,179 +27,6 @@ const changePasswordSchema = z.object({
 
 type ChangePasswordForm = z.infer<typeof changePasswordSchema>
 
-function InlineUsers({ onRefresh }: { onRefresh?: () => void }) {
-  const [users, setUsers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingUser, setEditingUser] = useState<any | null>(null)
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
-
-  const userSchema = z.object({
-    email: z.string().email('Email inválido'),
-    password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
-    username: z.string().min(3, 'Mínimo 3 caracteres'),
-    full_name: z.string().min(2, 'Mínimo 2 caracteres'),
-    role: z.enum(['trainer', 'admin', 'superuser']),
-    phone: z.string().regex(/^\+[1-9]\d{7,14}$/, 'Formato: +código_país+número').optional().or(z.literal('')),
-  })
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(userSchema) })
-
-  const fetchUsers = async () => {
-    setLoading(true)
-    const { data, error } = await supabase.rpc('get_users_with_emails')
-    if (!error) setUsers(data || [])
-    setLoading(false)
-  }
-
-  useEffect(() => { fetchUsers() }, [])
-
-  const onSubmit = async (data: any) => {
-    setMsg(null)
-    try {
-      if (editingUser) {
-        const { data: res, error } = await supabase.rpc('update_user_profile', {
-          profile_id: editingUser.id,
-          new_username: data.username,
-          new_full_name: data.full_name,
-          new_role: data.role,
-          new_phone: data.phone || null,
-          new_password: data.password || null,
-        })
-        if (error) throw error
-        if (!res.success) throw new Error(res.error)
-        setMsg({ text: 'Usuario actualizado', ok: true })
-      } else {
-        const { data: res, error } = await supabase.rpc('create_user_with_profile', {
-          user_email: data.email,
-          user_password: data.password,
-          user_username: data.username,
-          user_full_name: data.full_name,
-          user_role: data.role,
-          user_phone: data.phone || null,
-        })
-        if (error) throw error
-        if (!res.success) throw new Error(res.error)
-        setMsg({ text: 'Usuario creado', ok: true })
-      }
-      setShowForm(false); setEditingUser(null); reset()
-      fetchUsers(); onRefresh?.()
-    } catch (err: any) {
-      setMsg({ text: err.message || 'Error', ok: false })
-    }
-  }
-
-  const handleDelete = async (u: any) => {
-    if (!confirm(`¿Eliminar a ${u.full_name}?`)) return
-    const { data: res, error } = await supabase.rpc('delete_user_safe', { user_auth_id: u.auth_user_id })
-    if (error || !res.success) { setMsg({ text: error?.message || res?.error || 'Error', ok: false }); return }
-    setMsg({ text: 'Usuario eliminado', ok: true })
-    fetchUsers(); onRefresh?.()
-  }
-
-  const handleEdit = (u: any) => {
-    setEditingUser(u)
-    setShowForm(true)
-    // Pequeño delay para que el form esté montado antes de hacer reset
-    setTimeout(() => {
-      reset({ email: u.email, username: u.username, full_name: u.full_name, role: u.role, phone: u.phone || '', password: '' })
-    }, 0)
-  }
-
-  const roleColor = (role: string) => role === 'superuser' ? 'bg-purple-500/20 text-purple-400' : role === 'admin' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-      <div className="flex justify-end">
-        <button onClick={() => { setShowForm(!showForm); setEditingUser(null); reset() }}
-          className="px-3 py-1.5 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-lg text-white text-sm font-medium flex items-center gap-1.5">
-          {showForm ? <><X className="w-3.5 h-3.5" /> Cancelar</> : <><User className="w-3.5 h-3.5" /> Nuevo Usuario</>}
-        </button>
-      </div>
-
-      {msg && (
-        <div className={`p-3 rounded-lg text-sm ${msg.ok ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
-          {msg.text}
-        </div>
-      )}
-
-      {showForm && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="glass-card p-4">
-          <h3 className="text-sm font-semibold text-white mb-3">{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
-          <form key={editingUser?.id || 'new'} onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-            {!editingUser && (
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Email</label>
-                <input {...register('email')} type="email" className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
-                {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email.message as string}</p>}
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Username</label>
-                <input {...register('username')} className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
-                {errors.username && <p className="text-xs text-red-400 mt-1">{errors.username.message as string}</p>}
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Nombre completo</label>
-                <input {...register('full_name')} className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
-                {errors.full_name && <p className="text-xs text-red-400 mt-1">{errors.full_name.message as string}</p>}
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">{editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
-                <input {...register('password')} type="password" className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
-                {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message as string}</p>}
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Teléfono (opcional)</label>
-                <input {...register('phone')} placeholder="+584123456789" className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
-                {errors.phone && <p className="text-xs text-red-400 mt-1">{errors.phone.message as string}</p>}
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Rol</label>
-              <select {...register('role')} className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none">
-                <option value="trainer">Entrenador</option>
-                <option value="admin">Administrador</option>
-                <option value="superuser">Superusuario</option>
-              </select>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setShowForm(false); setEditingUser(null); reset() }} className="flex-1 py-2 bg-slate-500/20 border border-slate-500/30 text-slate-300 text-sm rounded-lg">Cancelar</button>
-              <button type="submit" disabled={isSubmitting} className="flex-1 py-2 bg-gradient-to-r from-accent-primary to-accent-secondary text-white text-sm font-medium rounded-lg disabled:opacity-50">
-                {isSubmitting ? 'Guardando...' : editingUser ? 'Actualizar' : 'Crear'}
-              </button>
-            </div>
-          </form>
-        </motion.div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" /></div>
-      ) : (
-        <div className="space-y-2">
-          {users.length === 0 && <p className="text-slate-400 text-sm text-center py-6">No hay usuarios registrados.</p>}
-          {users.map((u: any) => (
-            <div key={u.id} className="flex items-center gap-3 p-3 glass-card border border-white/5">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${roleColor(u.role)}`}>
-                <User className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{u.full_name}</p>
-                <p className="text-xs text-slate-400">@{u.username} • {u.email}</p>
-                {u.phone && <p className="text-xs text-slate-500">{u.phone}</p>}
-                <span className={`text-xs px-1.5 py-0.5 rounded ${roleColor(u.role)}`}>{u.role}</span>
-              </div>
-              <div className="flex gap-1.5 flex-shrink-0">
-                <button onClick={() => handleEdit(u)} className="p-1.5 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg"><Edit className="w-3.5 h-3.5" /></button>
-                <button onClick={() => handleDelete(u)} className="p-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </motion.div>
-  )
-}
 
 export default function Settings() {
   const { user, signOut } = useAuth()
@@ -1420,8 +1247,14 @@ export default function Settings() {
                 </div>
                 {selectedPayment.amount_eur && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Monto</span>
+                    <span className="text-slate-400">Plan</span>
                     <span className="text-accent-primary font-semibold">{selectedPayment.amount_eur} EUR/mes</span>
+                  </div>
+                )}
+                {selectedPayment.amount_bs && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Monto transferido</span>
+                    <span className="text-white font-semibold">Bs. {Number(selectedPayment.amount_bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 )}
                 {selectedPayment.payment_method && (
