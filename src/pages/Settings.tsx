@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLicense } from '@/hooks/useLicense'
 import { useClients } from '@/hooks/useClients'
-import { Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, ShieldCheck, AlertTriangle, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2, CreditCard, Save, Ban, CheckCircle2, X, RefreshCw, Edit } from 'lucide-react'
+import { Key, Shield, User, LogOut, Calendar, CheckCircle, XCircle, ShieldX, ShieldCheck, AlertTriangle, Settings as SettingsIcon, Database, Download, Lock, Eye, EyeOff, Camera, Trash2, CreditCard, Save, Ban, CheckCircle2, X, RefreshCw, Edit, Plus } from 'lucide-react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { format, addMonths, addYears } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -552,8 +552,78 @@ export default function Settings() {
     window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
+  // ── Publicidad ────────────────────────────────────────────────────────────
+  const [ads, setAds] = useState<any[]>([])
+  const [adsLoading, setAdsLoading] = useState(false)
+  const [showAdForm, setShowAdForm] = useState(false)
+  const [editingAd, setEditingAd] = useState<any | null>(null)
+  const [adForm, setAdForm] = useState({ title: '', subtitle: '', image_url: '', link_url: '', active: true, display_order: 0 })
+  const [isSavingAd, setIsSavingAd] = useState(false)
+  const [isUploadingAdImage, setIsUploadingAdImage] = useState(false)
+  const adImageInputRef = useRef<HTMLInputElement>(null)
+
+  const fetchAds = async () => {
+    setAdsLoading(true)
+    const { data } = await supabase.from('ads').select('*').order('display_order')
+    setAds(data || [])
+    setAdsLoading(false)
+  }
+
+  useEffect(() => {
+    if (isSuperUser) fetchAds()
+  }, [isSuperUser])
+
+  const handleAdImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { showToast('Solo se permiten imágenes', 'error'); return }
+    if (file.size > 5 * 1024 * 1024) { showToast('La imagen no puede superar 5MB', 'error'); return }
+    setIsUploadingAdImage(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const filePath = `ad-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('ads').upload(filePath, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data: urlData } = supabase.storage.from('ads').getPublicUrl(filePath)
+      setAdForm(p => ({ ...p, image_url: urlData.publicUrl }))
+      showToast('Imagen subida correctamente', 'success')
+    } catch (err: any) { showToast(err.message || 'Error al subir imagen', 'error') }
+    finally { setIsUploadingAdImage(false); if (adImageInputRef.current) adImageInputRef.current.value = '' }
+  }
+
+  const handleSaveAd = async () => {
+    if (!adForm.title.trim()) { showToast('El título es obligatorio', 'error'); return }
+    setIsSavingAd(true)
+    try {
+      if (editingAd) {
+        const { error } = await supabase.from('ads').update(adForm).eq('id', editingAd.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('ads').insert(adForm)
+        if (error) throw error
+      }
+      showToast(editingAd ? 'Anuncio actualizado' : 'Anuncio creado', 'success')
+      setShowAdForm(false); setEditingAd(null)
+      setAdForm({ title: '', subtitle: '', image_url: '', link_url: '', active: true, display_order: 0 })
+      fetchAds()
+    } catch (err: any) { showToast(err.message || 'Error al guardar', 'error') }
+    finally { setIsSavingAd(false) }
+  }
+
+  const handleDeleteAd = async (id: string) => {
+    if (!confirm('¿Eliminar este anuncio?')) return
+    await supabase.from('ads').delete().eq('id', id)
+    showToast('Anuncio eliminado', 'success')
+    fetchAds()
+  }
+
+  const handleToggleAd = async (ad: any) => {
+    await supabase.from('ads').update({ active: !ad.active }).eq('id', ad.id)
+    fetchAds()
+  }
+
   // Tab principal de la página
-  const [mainTab, setMainTab] = useState<'config' | 'users' | 'licenses' | 'payments' | 'cobro'>('config')
+  const [mainTab, setMainTab] = useState<'config' | 'users' | 'licenses' | 'payments' | 'cobro' | 'ads'>('config')
 
   return (
     <div className="pb-20 max-w-md mx-auto">
@@ -588,8 +658,8 @@ export default function Settings() {
       {/* Tab bar — solo visible para superuser */}
       {isSuperUser && (
         <div className="flex border-b border-white/10 px-2 mb-2 overflow-x-auto">
-          {(['config', 'users', 'licenses', 'payments', 'cobro'] as const).map((tab) => {
-            const labels = { config: 'Config', users: 'Usuarios', licenses: 'Licencias', payments: 'Pagos', cobro: 'Cobro' }
+          {(['config', 'users', 'licenses', 'payments', 'cobro', 'ads'] as const).map((tab) => {
+            const labels = { config: 'Config', users: 'Usuarios', licenses: 'Licencias', payments: 'Pagos', cobro: 'Cobro', ads: 'Publicidad' }
             const isActive = mainTab === tab
             return (
               <button
@@ -1208,6 +1278,123 @@ export default function Settings() {
                 {isSavingPayment ? 'Guardando...' : 'Guardar datos de cobro'}
               </motion.button>
             </div>
+          </motion.div>
+        )}
+
+        {/* ══════════════ TAB: PUBLICIDAD (superuser) ══════════════ */}
+        {mainTab === 'ads' && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">Anuncios del carrusel</h3>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setShowAdForm(!showAdForm); setEditingAd(null); setAdForm({ title: '', subtitle: '', image_url: '', link_url: '', active: true, display_order: ads.length }) }}
+                className="px-3 py-1.5 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-lg text-white text-sm font-medium flex items-center gap-1.5">
+                {showAdForm ? <><X className="w-3.5 h-3.5" /> Cancelar</> : <><Plus className="w-3.5 h-3.5" /> Nuevo Anuncio</>}
+              </motion.button>
+            </div>
+
+            {showAdForm && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="glass-card p-4 space-y-3">
+                <h4 className="text-sm font-semibold text-white">{editingAd ? 'Editar anuncio' : 'Nuevo anuncio'}</h4>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Título *</label>
+                  <input value={adForm.title} onChange={e => setAdForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Ej: ¡Descuento en suplementos!" className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Subtítulo (opcional)</label>
+                  <input value={adForm.subtitle} onChange={e => setAdForm(p => ({ ...p, subtitle: e.target.value }))}
+                    placeholder="Ej: Usa el código GYM20" className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Link (opcional)</label>
+                  <input value={adForm.link_url} onChange={e => setAdForm(p => ({ ...p, link_url: e.target.value }))}
+                    placeholder="https://..." className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Imagen (opcional)</label>
+                  <input ref={adImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleAdImageUpload} />
+                  {adForm.image_url ? (
+                    <div className="space-y-2">
+                      <img src={adForm.image_url} alt="preview" className="w-full h-32 object-cover rounded-lg border border-white/10" />
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => adImageInputRef.current?.click()} disabled={isUploadingAdImage}
+                          className="flex-1 py-1.5 text-xs bg-accent-primary/10 border border-accent-primary/20 text-accent-primary rounded-lg disabled:opacity-50">
+                          {isUploadingAdImage ? 'Subiendo...' : 'Cambiar imagen'}
+                        </button>
+                        <button type="button" onClick={() => setAdForm(p => ({ ...p, image_url: '' }))}
+                          className="py-1.5 px-3 text-xs bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => adImageInputRef.current?.click()} disabled={isUploadingAdImage}
+                      className="w-full py-8 border-2 border-dashed border-white/10 rounded-lg text-slate-400 text-sm hover:border-accent-primary/30 hover:text-accent-primary transition-all flex flex-col items-center gap-2 disabled:opacity-50">
+                      {isUploadingAdImage
+                        ? <><div className="w-5 h-5 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" /><span>Subiendo...</span></>
+                        : <><Camera className="w-6 h-6" /><span>Subir imagen</span></>}
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Orden</label>
+                    <input type="number" value={adForm.display_order} onChange={e => setAdForm(p => ({ ...p, display_order: parseInt(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:border-accent-primary focus:outline-none" />
+                  </div>
+                  <div className="flex items-end pb-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <div onClick={() => setAdForm(p => ({ ...p, active: !p.active }))}
+                        className={`w-10 h-5 rounded-full transition-colors ${adForm.active ? 'bg-accent-primary' : 'bg-slate-600'} relative`}>
+                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${adForm.active ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </div>
+                      <span className="text-xs text-slate-300">Activo</span>
+                    </label>
+                  </div>
+                </div>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSaveAd} disabled={isSavingAd}
+                  className="w-full py-2.5 bg-gradient-to-r from-accent-primary to-accent-secondary text-white text-sm font-medium rounded-lg disabled:opacity-50">
+                  {isSavingAd ? 'Guardando...' : editingAd ? 'Actualizar anuncio' : 'Crear anuncio'}
+                </motion.button>
+              </motion.div>
+            )}
+
+            {adsLoading ? (
+              <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" /></div>
+            ) : ads.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-8">No hay anuncios creados.</p>
+            ) : (
+              <div className="space-y-2">
+                {ads.map((ad: any) => (
+                  <div key={ad.id} className="glass-card p-3 flex items-start gap-3 border border-white/5">
+                    {ad.image_url && (
+                      <img src={ad.image_url} alt={ad.title} className="w-14 h-14 object-cover rounded-lg flex-shrink-0 border border-white/10" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{ad.title}</p>
+                      {ad.subtitle && <p className="text-xs text-slate-400 truncate">{ad.subtitle}</p>}
+                      <span className={`text-xs px-1.5 py-0.5 rounded mt-1 inline-block ${ad.active ? 'bg-green-500/10 text-green-400' : 'bg-slate-500/10 text-slate-400'}`}>
+                        {ad.active ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button onClick={() => handleToggleAd(ad)} className={`p-1.5 rounded-lg border text-xs ${ad.active ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
+                        {ad.active ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => { setEditingAd(ad); setAdForm({ title: ad.title, subtitle: ad.subtitle || '', image_url: ad.image_url || '', link_url: ad.link_url || '', active: ad.active, display_order: ad.display_order }); setShowAdForm(true) }}
+                        className="p-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg">
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDeleteAd(ad.id)} className="p-1.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 

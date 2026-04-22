@@ -17,6 +17,7 @@ import Reports from '@/pages/Reports'
 import Layout from '@/components/Layout'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import LicenseExpired from '@/components/LicenseExpired'
+import PublicComparison from '@/pages/PublicComparison'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth()
@@ -64,6 +65,7 @@ function AppRoutes() {
       <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/license-expired" element={<LicenseExpired />} />
+      <Route path="/comparacion/:shareId" element={<PublicComparison />} />
       <Route
         path="/app"
         element={

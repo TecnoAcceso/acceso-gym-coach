@@ -46,6 +46,24 @@ const BANKS = [
   '0601 - IMCP',
 ]
 
+// Estilo app bancaria venezolana: solo dígitos, decimales fijos de 2
+// Escribes 14385 → 143,85 | 1438567 → 14.385,67
+function formatVES(digits: string): string {
+  const clean = digits.replace(/\D/g, '').replace(/^0+/, '') || '0'
+  const padded = clean.padStart(3, '0')
+  const intPart = padded.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') || '0'
+  const decPart = padded.slice(-2)
+  return `${intPart},${decPart}`
+}
+
+function rawDigits(formatted: string): string {
+  return formatted.replace(/\D/g, '')
+}
+
+function parseVES(formatted: string): number {
+  return parseFloat(formatted.replace(/\./g, '').replace(',', '.')) || 0
+}
+
 export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalProps) {
   const { user, userProfile } = useAuth()
   const [settings, setSettings] = useState<PaymentSettings | null>(null)
@@ -91,19 +109,48 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
       setError('La referencia debe tener exactamente 6 dígitos numéricos')
       return
     }
+    const montoNum = parseVES(form.amount_bs)
+    if (isNaN(montoNum) || montoNum <= 0) {
+      setError('Ingresa un monto válido')
+      return
+    }
+    if (eurToBs !== null) {
+      const exactBs = 12 * eurToBs
+      const minBs = Math.floor(exactBs)
+      const maxBs = Math.ceil(exactBs)
+      if (montoNum < minBs || montoNum > maxBs) {
+        setError(`El monto debe estar entre Bs. ${minBs} y Bs. ${maxBs} (equivalente a 12 EUR según tasa BCV)`)
+        return
+      }
+    }
     setSubmitting(true)
     setError('')
     try {
+      // Obtener el profile_id fresco desde la DB para evitar que llegue null
+      let profileId = userProfile?.id ?? null
+      let profileFullName = user?.full_name || userProfile?.full_name || ''
+      if (!profileId && user?.id) {
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('id, full_name')
+          .eq('auth_user_id', user.id)
+          .single()
+        if (profileData) {
+          profileId = profileData.id
+          profileFullName = profileData.full_name || profileFullName
+        }
+      }
+
       const { error: insertError } = await supabase.from('payment_requests').insert({
         auth_user_id: user?.id ?? null,
-        trainer_profile_id: userProfile?.id ?? null,
-        full_name: user?.full_name || userProfile?.full_name || '',
+        trainer_profile_id: profileId,
+        full_name: profileFullName,
         plan: 'monthly',
         amount_eur: 12,
         bank: form.bank,
         reference: form.reference,
         payment_date: form.payment_date,
-        amount_bs: parseFloat(form.amount_bs),
+        amount_bs: parseVES(form.amount_bs),
         status: 'pending',
       })
       if (insertError) throw insertError
@@ -306,8 +353,8 @@ export default function PaymentModal({ open, onClose, onSuccess }: PaymentModalP
                         type="tel"
                         inputMode="decimal"
                         value={form.amount_bs}
-                        onChange={e => setForm(p => ({ ...p, amount_bs: e.target.value.replace(/[^0-9.]/g, '') }))}
-                        placeholder="Ej: 450.00"
+                        onChange={e => setForm(p => ({ ...p, amount_bs: formatVES(rawDigits(e.target.value)) }))}
+                        placeholder="Ej: 1.234,56"
                         className="w-full px-3 py-2.5 bg-[#1A2332]/60 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:border-[#00D4FF] focus:outline-none"
                       />
                     </div>

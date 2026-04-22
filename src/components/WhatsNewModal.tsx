@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sparkles, CheckCircle, BarChart2, Bell, Layout } from 'lucide-react'
+import { X, Sparkles, CheckCircle, Link } from 'lucide-react'
 
-const CURRENT_VERSION = '2.2.0'
+const CURRENT_VERSION = '2.3.0'
 const STORAGE_KEY = 'whats-new-seen-version'
 
 interface WhatsNewModalProps {
@@ -59,7 +59,7 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
           {/* Content */}
           <div className="p-4 overflow-y-auto max-h-[calc(85vh-160px)] space-y-3">
 
-            {/* Notificaciones Push */}
+            {/* Link compartible de comparación */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -67,99 +67,36 @@ export default function WhatsNewModal({ onClose }: WhatsNewModalProps) {
               className="glass-card p-4 border-2 border-accent-primary/50"
             >
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Link className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    Notificaciones Push
+                    Link compartible de comparación
                     <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">NUEVO</span>
                   </h3>
                   <ul className="space-y-1.5 text-sm text-slate-400">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Aviso diario a las 8AM cuando un cliente tiene la membresía vencida ese día</span>
+                      <span>Genera un link único para compartir la comparación de medidas de tu cliente por WhatsApp</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Notificación cuando el administrador aprueba tu pago de licencia</span>
+                      <span>El cliente debe ingresar su cédula para ver los datos — nadie más puede acceder</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Aviso 1 día antes de que tu licencia venza para que puedas renovar a tiempo</span>
+                      <span>Muestra fotos de progreso, tabla de cambios y publicidades — el link expira en 30 días</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                      <span>El botón de WhatsApp ahora envía el link directamente — ya no es necesario descargar el PDF</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </motion.div>
 
-            {/* Reportes */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="glass-card p-4 border-2 border-accent-primary/50"
-            >
-              <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <BarChart2 className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    Reportes y estadísticas
-                    <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">NUEVO</span>
-                  </h3>
-                  <ul className="space-y-1.5 text-sm text-slate-400">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Gráfica de renovaciones por mes (últimos 6 meses)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Estado actual de clientes en gráfica tipo dona</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Tasa de retención mensual — cuántos clientes renuevan vs se van</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Mejoras UI */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15 }}
-              className="glass-card p-4 border-2 border-accent-primary/50"
-            >
-              <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Layout className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    Mejoras de interfaz
-                    <span className="text-xs bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded-full">MEJORADO</span>
-                  </h3>
-                  <ul className="space-y-1.5 text-sm text-slate-400">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Todas las pantallas con header uniforme: logo + título centrado</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Renovar licencia disponible en Configuración sin esperar a que venza</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span>Campo de referencia de pago ahora solo acepta 6 dígitos numéricos</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
 
           </div>
 

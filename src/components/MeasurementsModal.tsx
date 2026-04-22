@@ -20,7 +20,10 @@ import {
   Trash2,
   Download,
   TrendingUp,
-  Camera
+  Camera,
+  Link,
+  Copy,
+  Check
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -78,6 +81,10 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
   const [startPhotos, setStartPhotos] = useState<any[]>([])
   const [endPhotos, setEndPhotos] = useState<any[]>([])
   const [loadingPhotos, setLoadingPhotos] = useState(false)
+
+  const [shareLink, setShareLink] = useState<string>('')
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   // FASE 1: Estados para fotos en el formulario
   const [pendingPhotos, setPendingPhotos] = useState<{ [key: string]: File }>({})
@@ -138,10 +145,45 @@ export default function MeasurementsModal({ isOpen, client, onClose }: Measureme
     }
   }, [isOpen])
 
-  // Resetear estado de PDF cuando cambian los períodos
+  // Resetear estado de PDF y link cuando cambian los períodos
   useEffect(() => {
     setPdfDownloaded(false)
+    setShareLink('')
+    setLinkCopied(false)
   }, [selectedStartId, selectedEndId])
+
+  const handleGenerateShareLink = async () => {
+    if (!selectedStartId || !selectedEndId || !client || !user) return
+    setIsGeneratingLink(true)
+    try {
+      const { supabase: sb } = await import('@/lib/supabase')
+      // Obtener el profile_id del trainer
+      const { data: profile } = await sb.from('user_profiles').select('id').eq('auth_user_id', user.id).single()
+      if (!profile) throw new Error('No se encontró el perfil del coach')
+
+      const { data, error } = await sb.from('comparison_shares').insert({
+        trainer_id: profile.id,
+        client_id: client.id,
+        start_measurement_id: selectedStartId,
+        end_measurement_id: selectedEndId,
+      }).select('id').single()
+
+      if (error) throw error
+      const link = `${window.location.origin}/comparacion/${data.id}`
+      setShareLink(link)
+    } catch (err: any) {
+      console.error('Error generando link:', err)
+    } finally {
+      setIsGeneratingLink(false)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return
+    await navigator.clipboard.writeText(shareLink)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 3000)
+  }
 
   // FASE 1: Cargar fotos cuando cambian los selectores
   useEffect(() => {
@@ -681,22 +723,21 @@ _Powered by TecnoAcceso / ElectroShop_`
 
   // FASE 1: Enviar mensaje por WhatsApp (después de descargar PDF)
   const handleSendWhatsApp = () => {
-    if (!selectedStartId || !selectedEndId || !client) return
+    if (!client || !shareLink) return
 
-    const startM = measurements.find(m => m.id === selectedStartId)
-    const endM = measurements.find(m => m.id === selectedEndId)
     const trainerName = user?.full_name || 'Tu entrenador'
 
     const message = `¡Hola ${client.full_name}! 👋
 
-Revisa el reporte de tus avances del ${formatDate(startM!.date)} al ${formatDate(endM!.date)} 📊
+Aquí puedes ver tu comparación de medidas y fotos de progreso 📊💪
 
-¡Estás haciendo un trabajo increíble! 💪
-Sigue así y alcanzarás todas tus metas.
+🔗 ${shareLink}
 
-Si tienes dudas, aquí estoy para ayudarte.
+Ingresa tu cédula para acceder a tus datos.
 
-Saludos! 🏋️
+¡Estás haciendo un trabajo increíble! Sigue así y alcanzarás todas tus metas.
+
+Saludos!
 ${trainerName}
 
 _Powered by TecnoAcceso / ElectroShop_`
@@ -1107,43 +1148,48 @@ _Powered by TecnoAcceso / ElectroShop_`
 
                           {/* Botones de acción */}
                           <div className="space-y-3">
-                            {/* Botón 1: Descargar PDF */}
-                            <motion.button
-                              whileHover={{ scale: pdfGenerationStatus ? 1 : 1.02 }}
-                              whileTap={{ scale: pdfGenerationStatus ? 1 : 0.98 }}
-                              onClick={handleDownloadPDF}
-                              disabled={!!pdfGenerationStatus || pdfDownloaded}
-                              className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                              {pdfGenerationStatus ? (
-                                <>
-                                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                                  <span className="text-lg">{pdfGenerationStatus}</span>
-                                </>
-                              ) : pdfDownloaded ? (
-                                <>
-                                  <Download className="w-6 h-6" />
-                                  <span className="text-lg">✓ PDF Descargado</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Download className="w-6 h-6" />
-                                  <span className="text-lg">Descargar PDF</span>
-                                </>
-                              )}
-                            </motion.button>
+                            {/* Botón 0: Generar link compartible */}
+                            {!shareLink ? (
+                              <motion.button
+                                whileHover={{ scale: isGeneratingLink ? 1 : 1.02 }}
+                                whileTap={{ scale: isGeneratingLink ? 1 : 0.98 }}
+                                onClick={handleGenerateShareLink}
+                                disabled={isGeneratingLink}
+                                className="w-full py-4 px-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                              >
+                                {isGeneratingLink ? (
+                                  <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Generando link...</span></>
+                                ) : (
+                                  <><Link className="w-5 h-5" /><span>Generar Link Compartible</span></>
+                                )}
+                              </motion.button>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                  <p className="text-xs text-purple-300 flex-1 truncate">{shareLink}</p>
+                                  <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleCopyLink}
+                                    className="flex-shrink-0 p-1.5 bg-purple-500/20 rounded-lg text-purple-400"
+                                  >
+                                    {linkCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                                  </motion.button>
+                                </div>
+                                <p className="text-xs text-slate-400 text-center">El link expira en 30 días · El cliente debe ingresar su cédula para verlo</p>
+                              </div>
+                            )}
 
-                            {/* Botón 2: Enviar por WhatsApp (solo se activa después de descargar) */}
+                            {/* Botón: Enviar por WhatsApp */}
                             <motion.button
-                              whileHover={{ scale: pdfDownloaded ? 1.02 : 1 }}
-                              whileTap={{ scale: pdfDownloaded ? 0.98 : 1 }}
+                              whileHover={{ scale: shareLink ? 1.02 : 1 }}
+                              whileTap={{ scale: shareLink ? 0.98 : 1 }}
                               onClick={handleSendWhatsApp}
-                              disabled={!pdfDownloaded}
+                              disabled={!shareLink}
                               className="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <FaWhatsapp className="w-6 h-6" />
                               <span className="text-lg">
-                                {pdfDownloaded ? 'Enviar por WhatsApp' : 'Descarga el PDF primero'}
+                                {shareLink ? 'Enviar link por WhatsApp' : 'Genera el link primero'}
                               </span>
                             </motion.button>
                           </div>
