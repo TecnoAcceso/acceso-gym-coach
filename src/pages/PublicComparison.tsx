@@ -80,6 +80,17 @@ export default function PublicComparison() {
   const [adIndex, setAdIndex] = useState(0)
   const [pdfStatus, setPdfStatus] = useState('')
 
+  // Prefetch del share para mostrar nombre del coach antes de verificar
+  useEffect(() => {
+    if (!shareId) return
+    supabase
+      .from('comparison_shares')
+      .select('*, clients(full_name, cedula), user_profiles(full_name)')
+      .eq('id', shareId)
+      .single()
+      .then(({ data }) => { if (data) setShareData(data) })
+  }, [shareId])
+
   // Cargar anuncios activos
   useEffect(() => {
     supabase.from('ads').select('*').eq('active', true).order('display_order').then(({ data }) => {
@@ -281,12 +292,20 @@ export default function PublicComparison() {
         {(step === 'verify' || step === 'loading') && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             className="flex-1 flex flex-col items-center justify-center gap-6">
+
+            {/* Saludo con nombre del coach */}
+            <div className="w-full bg-gradient-to-br from-[#00D4FF]/10 to-[#0EA5E9]/5 border border-[#00D4FF]/20 rounded-2xl p-5 text-center space-y-1">
+              <p className="text-slate-400 text-xs uppercase tracking-widest font-medium">Tu coach</p>
+              <p className="text-white font-bold text-lg leading-tight">{shareData?.user_profiles?.full_name ?? '...'}</p>
+              <p className="text-[#00D4FF] text-xs mt-1">te ha compartido tu comparación de avances 💪</p>
+            </div>
+
             <div className="w-16 h-16 rounded-full bg-[#00D4FF]/10 border border-[#00D4FF]/20 flex items-center justify-center">
               <Shield className="w-8 h-8 text-[#00D4FF]" />
             </div>
             <div className="text-center">
-              <h2 className="text-white font-bold text-xl mb-1">Verificación</h2>
-              <p className="text-slate-400 text-sm">Ingresa tu número de cédula para ver tu comparación</p>
+              <h2 className="text-white font-bold text-xl mb-1">Verificación de identidad</h2>
+              <p className="text-slate-400 text-sm">Ingresa tu número de cédula para ver tus resultados</p>
             </div>
             <div className="w-full max-w-xs space-y-3">
               <input
@@ -309,7 +328,7 @@ export default function PublicComparison() {
               >
                 {step === 'loading'
                   ? <><div className="w-4 h-4 border-2 border-[#0B1426] border-t-transparent rounded-full animate-spin" /> Verificando...</>
-                  : 'Ver mi comparación'}
+                  : 'Ver mis resultados →'}
               </motion.button>
             </div>
           </motion.div>
@@ -436,6 +455,37 @@ export default function PublicComparison() {
               </div>
             )}
 
+            {/* Botón descargar PDF */}
+            <motion.button
+              whileHover={{ scale: pdfStatus ? 1 : 1.03 }}
+              whileTap={{ scale: pdfStatus ? 1 : 0.97 }}
+              onClick={handleDownloadPDF}
+              disabled={!!pdfStatus}
+              className="w-full relative overflow-hidden rounded-2xl disabled:opacity-60 disabled:cursor-not-allowed group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
+              <div className="relative flex items-center justify-between px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Download className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-bold text-sm leading-tight">
+                      {pdfStatus ? pdfStatus : 'Guardar como PDF'}
+                    </p>
+                    <p className="text-white/60 text-xs">Descarga tu reporte completo</p>
+                  </div>
+                </div>
+                {pdfStatus
+                  ? <div className="w-5 h-5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                  : <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">↓</span>
+                    </div>
+                }
+              </div>
+            </motion.button>
+
             {/* Carrusel de publicidades */}
             {ads.length > 0 && (
               <div className="space-y-1.5">
@@ -494,26 +544,6 @@ export default function PublicComparison() {
                 </div>
               </div>
             )}
-            {/* Botón descargar PDF */}
-            <motion.button
-              whileHover={{ scale: pdfStatus ? 1 : 1.02 }}
-              whileTap={{ scale: pdfStatus ? 1 : 0.98 }}
-              onClick={handleDownloadPDF}
-              disabled={!!pdfStatus}
-              className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
-            >
-              {pdfStatus ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{pdfStatus}</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-5 h-5" />
-                  <span>Descargar PDF</span>
-                </>
-              )}
-            </motion.button>
 
           </motion.div>
         )}
