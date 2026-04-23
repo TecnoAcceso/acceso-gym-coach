@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Shield, TrendingUp, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Shield, TrendingUp, Camera, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 interface ShareData {
   id: string
@@ -76,6 +78,7 @@ export default function PublicComparison() {
   const [endPhotos, setEndPhotos] = useState<Photo[]>([])
   const [ads, setAds] = useState<Ad[]>([])
   const [adIndex, setAdIndex] = useState(0)
+  const [pdfStatus, setPdfStatus] = useState('')
 
   // Cargar anuncios activos
   useEffect(() => {
@@ -140,6 +143,125 @@ export default function PublicComparison() {
   }
 
   const formatDate = (d: string) => format(new Date(d), "d 'de' MMMM yyyy", { locale: es })
+
+  const handleDownloadPDF = async () => {
+    if (!shareData || !startM || !endM) return
+    try {
+      setPdfStatus('Generando PDF...')
+      await new Promise(r => setTimeout(r, 300))
+
+      const coachName = shareData.user_profiles?.full_name || 'Tu coach'
+      const clientName = shareData.clients?.full_name || ''
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+
+      // Header
+      pdf.setFillColor(11, 20, 38)
+      pdf.rect(0, 0, pageWidth, 40, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(`Coach: ${coachName}`, pageWidth / 2, 13, { align: 'center' })
+      pdf.setFontSize(16)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text('Comparación de Avances', pageWidth / 2, 24, { align: 'center' })
+      pdf.setTextColor(100, 116, 139)
+      pdf.setFontSize(10)
+      pdf.text(`Cliente: ${clientName}`, pageWidth / 2, 35, { align: 'center' })
+
+      // Fechas
+      pdf.setTextColor(0, 0, 0)
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(`Período Inicial: ${formatDate(startM.date)}`, 20, 50)
+      pdf.text(`Período Final: ${formatDate(endM.date)}`, pageWidth - 20, 50, { align: 'right' })
+
+      // Tabla
+      const tableData: any[] = []
+      FIELDS.forEach(({ key, label, unit }) => {
+        const s = startM[key] as number | undefined
+        const e = endM[key] as number | undefined
+        if (s || e) {
+          const diff = (e || 0) - (s || 0)
+          const diffStr = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)
+          const arrow = diff > 0 ? '^' : diff < 0 ? 'v' : '='
+          tableData.push([label, s ? `${s} ${unit}` : '-', e ? `${e} ${unit}` : '-', `${arrow} ${diffStr} ${unit}`])
+        }
+      })
+
+      autoTable(pdf, {
+        startY: 60,
+        head: [['Medida', 'Inicial', 'Final', 'Cambio']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontSize: 11, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 10, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { halign: 'left', cellWidth: 50 }, 1: { halign: 'center', cellWidth: 40 }, 2: { halign: 'center', cellWidth: 40 }, 3: { halign: 'center', cellWidth: 50, fontStyle: 'bold' } },
+        margin: { left: 20, right: 20 }
+      })
+
+      pdf.setFontSize(8)
+      pdf.setTextColor(148, 163, 184)
+      pdf.text(`Generado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth / 2, pageHeight - 14, { align: 'center' })
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(0, 212, 255)
+      pdf.text('AccesoGym Coach', pageWidth / 2, pageHeight - 7, { align: 'center' })
+
+      // Página 2: fotos
+      if (startPhotos.length > 0 || endPhotos.length > 0) {
+        pdf.addPage()
+        pdf.setFillColor(11, 20, 38)
+        pdf.rect(0, 0, pageWidth, 20, 'F')
+        pdf.setTextColor(255, 255, 255)
+        pdf.setFontSize(14)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Comparación de Fotos', pageWidth / 2, 13, { align: 'center' })
+
+        const photoTypes = ['frontal', 'lateral', 'posterior']
+        const photoLabels: Record<string, string> = { frontal: 'Frontal', lateral: 'Lateral', posterior: 'Posterior' }
+        let yPos = 28
+        const photoWidth = 60, photoHeight = 68, spacing = 6
+        const leftX = 25, rightX = pageWidth / 2 + 5
+
+        photoTypes.forEach(type => {
+          const sp = startPhotos.find(p => p.photo_type === type)
+          const ep = endPhotos.find(p => p.photo_type === type)
+          pdf.setTextColor(0, 0, 0); pdf.setFontSize(11); pdf.setFont('helvetica', 'bold')
+          pdf.text(photoLabels[type], pageWidth / 2, yPos, { align: 'center' })
+          yPos += 6
+          pdf.setFontSize(9); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(100, 116, 139)
+          pdf.text('ANTES', leftX + photoWidth / 2, yPos, { align: 'center' })
+          pdf.text('DESPUÉS', rightX + photoWidth / 2, yPos, { align: 'center' })
+          yPos += 4
+
+          const drawPhoto = (photo: Photo | undefined, x: number) => {
+            if (photo) {
+              try { pdf.addImage(photo.photo_url, 'JPEG', x, yPos, photoWidth, photoHeight) }
+              catch { pdf.setFillColor(240, 240, 240); pdf.rect(x, yPos, photoWidth, photoHeight, 'F') }
+            } else {
+              pdf.setFillColor(240, 240, 240); pdf.rect(x, yPos, photoWidth, photoHeight, 'F')
+              pdf.setTextColor(150, 150, 150); pdf.setFontSize(8)
+              pdf.text('Sin foto', x + photoWidth / 2, yPos + photoHeight / 2, { align: 'center' })
+            }
+          }
+          drawPhoto(sp, leftX); drawPhoto(ep, rightX)
+          yPos += photoHeight + spacing
+        })
+
+        pdf.setFontSize(8); pdf.setTextColor(148, 163, 184)
+        pdf.text(`Generado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
+      }
+
+      const fileName = `comparacion_${clientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`
+      pdf.save(fileName)
+      setPdfStatus('')
+    } catch (err) {
+      console.error(err)
+      setPdfStatus('')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0B1426] flex flex-col">
@@ -372,6 +494,27 @@ export default function PublicComparison() {
                 </div>
               </div>
             )}
+            {/* Botón descargar PDF */}
+            <motion.button
+              whileHover={{ scale: pdfStatus ? 1 : 1.02 }}
+              whileTap={{ scale: pdfStatus ? 1 : 0.98 }}
+              onClick={handleDownloadPDF}
+              disabled={!!pdfStatus}
+              className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+            >
+              {pdfStatus ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>{pdfStatus}</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  <span>Descargar PDF</span>
+                </>
+              )}
+            </motion.button>
+
           </motion.div>
         )}
       </div>
